@@ -38,6 +38,7 @@ Demo accounts (password `demo1234`): `admin@`, `principal@`, `teacher@`, `accoun
 | Command | Does |
 |---|---|
 | `npm run dev` | API (watch mode) and web together |
+| `npm run preview` | Production build of the web app plus the API: every page opens in well under a second. Use it to click through the app; use `dev` while editing code (it compiles each page on first visit) |
 | `npm run typecheck` | TypeScript across all workspaces |
 | `npm run lint` | ESLint |
 | `npm test` | Web unit + contract tests and API tests (needs `npm run db:up`) |

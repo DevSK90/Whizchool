@@ -13,6 +13,7 @@
     "dev": "concurrently -k -n api,web -c blue,magenta \"npm run dev -w @whizchool/api\" \"npm run dev -w @whizchool/web\"",
     "dev:web": "npm run dev -w @whizchool/web",
     "dev:api": "npm run dev -w @whizchool/api",
+    "preview": "npm run build -w @whizchool/web && concurrently -k -n api,web -c blue,magenta \"npm run dev -w @whizchool/api\" \"npm run start -w @whizchool/web\"",
     "build": "npm run build --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
