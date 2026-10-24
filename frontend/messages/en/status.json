@@ -1,0 +1,97 @@
+{
+  "student": {
+    "active": "Active",
+    "left": "Left",
+    "graduated": "Graduated",
+    "expelled": "Expelled"
+  },
+  "application": {
+    "new": "New",
+    "interview": "Interview",
+    "accepted": "Accepted",
+    "rejected": "Rejected",
+    "enrolled": "Enrolled",
+    "withdrawn": "Withdrawn"
+  },
+  "attendance": {
+    "present": "Present",
+    "absent": "Absent",
+    "late": "Late",
+    "excused": "Excused"
+  },
+  "exam": {
+    "scheduled": "Scheduled",
+    "marks_entry": "Marks entry",
+    "review": "In review",
+    "released": "Released"
+  },
+  "reportCard": {
+    "pending_marks": "Awaiting marks",
+    "draft": "Ready for review",
+    "approved": "Approved",
+    "released": "Released"
+  },
+  "invoice": {
+    "unpaid": "Unpaid",
+    "partial": "Partly paid",
+    "paid": "Paid",
+    "void": "Void",
+    "overdue": "Overdue"
+  },
+  "payment": {
+    "completed": "Completed",
+    "pending": "Pending",
+    "failed": "Failed",
+    "reversed": "Reversed"
+  },
+  "method": {
+    "cash": "Cash",
+    "cheque": "Cheque",
+    "bank_deposit": "Bank deposit",
+    "payhere": "PayHere (online)"
+  },
+  "user": {
+    "invited": "Invited",
+    "active": "Active",
+    "deactivated": "Deactivated"
+  },
+  "message": {
+    "queued": "Queued",
+    "sending": "Sending",
+    "sent": "Sent",
+    "partial": "Partly delivered",
+    "failed": "Failed"
+  },
+  "scope": {
+    "all": "Whole school",
+    "own_class": "Own class only",
+    "own_subjects": "Own subjects only",
+    "own_children": "Own children only"
+  },
+  "level": {
+    "primary": "Primary",
+    "junior": "Junior secondary",
+    "ol": "O/L",
+    "al": "A/L"
+  },
+  "recurrence": {
+    "monthly": "Monthly",
+    "one_time": "One-time",
+    "ad_hoc": "When charged"
+  },
+  "gender": {
+    "M": "Male",
+    "F": "Female"
+  },
+  "relationship": {
+    "Father": "Father",
+    "Mother": "Mother",
+    "Guardian": "Guardian"
+  },
+  "promotion": {
+    "promote": "Promote",
+    "repeat": "Repeat grade",
+    "leave": "Leaving",
+    "graduate": "Graduate"
+  }
+}

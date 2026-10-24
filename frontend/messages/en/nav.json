@@ -1,0 +1,41 @@
+{
+  "dashboard": "Dashboard",
+  "groups": {
+    "people": "People",
+    "academics": "Academics",
+    "finance": "Finance",
+    "communication": "Communication",
+    "admin": "Administration"
+  },
+  "admissions": "Admissions",
+  "students": "Students",
+  "classes": "Classes",
+  "attendance": "Attendance",
+  "exams": "Term tests & marks",
+  "reportCards": "Report cards",
+  "promotions": "Promotions",
+  "fees": "Fees overview",
+  "invoices": "Invoices",
+  "payments": "Payments",
+  "defaulters": "Defaulters",
+  "feeSettings": "Fee structure",
+  "messaging": "Messages & notices",
+  "users": "Users",
+  "roles": "Roles & permissions",
+  "import": "Import data",
+  "settings": "School settings",
+  "auditLog": "Audit log",
+  "portal": {
+    "home": "Home",
+    "notices": "Notices",
+    "profile": "Profile"
+  },
+  "account": {
+    "profile": "Profile",
+    "signOut": "Sign out",
+    "signedInAs": "Signed in as"
+  },
+  "openMenu": "Open menu",
+  "toggleSidebar": "Toggle sidebar",
+  "skipToContent": "Skip to content"
+}

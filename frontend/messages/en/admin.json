@@ -1,0 +1,281 @@
+{
+  "messaging": {
+    "title": "Messages & notices",
+    "description": "Send SMS or email to parents and staff, and publish notices to the portal.",
+    "tabs": {
+      "compose": "Compose",
+      "history": "Sent messages",
+      "notices": "Notice board"
+    },
+    "compose": {
+      "channel": "Channel",
+      "sms": "SMS",
+      "email": "Email",
+      "audience": "Send to",
+      "audiences": {
+        "all_parents": "All parents",
+        "grade": "Parents of a grade",
+        "class": "Parents of a class",
+        "all_staff": "All staff",
+        "defaulters": "Parents with overdue fees"
+      },
+      "pickGrades": "Grades",
+      "pickClasses": "Classes",
+      "recipients": "{count, plural, =0 {No recipients} one {# recipient} other {# recipients}}",
+      "subject": "Subject",
+      "body": "Message",
+      "smsCount": "{chars} characters · {parts, plural, one {# SMS} other {# SMS}} per recipient",
+      "templates": "Templates",
+      "send": "Send",
+      "sendTitle": "Send this {channel}?",
+      "sendBody": "It will go to {count} recipients and can't be recalled.",
+      "sent": "Message queued for {count} recipients.",
+      "senderId": "Sender ID: {id}",
+      "template": {
+        "holiday": "School holiday",
+        "holidayText": "Dear parent, the school will be closed on {date} for {reason}. Classes resume the next school day.",
+        "meeting": "Parent meeting",
+        "meetingText": "Dear parent, a parent–teacher meeting for {class} will be held on {date} at {time} in the main hall.",
+        "fees": "Fee reminder",
+        "feesText": "Dear parent, a reminder that this month's school fees are due on the 10th. You can pay online through the parent portal."
+      }
+    },
+    "history": {
+      "columns": {
+        "sent": "Sent",
+        "channel": "Channel",
+        "audience": "Audience",
+        "message": "Message",
+        "delivery": "Delivered",
+        "status": "Status",
+        "by": "By"
+      },
+      "kind": {
+        "all": "All types",
+        "manual": "Manual",
+        "absence_alert": "Absence alerts",
+        "fee_reminder": "Fee reminders",
+        "system": "System"
+      }
+    },
+    "notices": {
+      "new": "New notice",
+      "edit": "Edit notice",
+      "title": "Title",
+      "body": "Notice",
+      "audience": "Visible to",
+      "audiences": {
+        "everyone": "Everyone",
+        "parents": "Parents",
+        "staff": "Staff"
+      },
+      "pinned": "Pin to top",
+      "publish": "Publish",
+      "published": "Notice published.",
+      "saved": "Notice saved.",
+      "delete": "Remove",
+      "deleteTitle": "Remove this notice?",
+      "deleted": "Notice removed.",
+      "empty": "No notices yet.",
+      "by": "{author} · {date}"
+    }
+  },
+  "users": {
+    "title": "Users",
+    "description": "Staff and parent accounts. Accounts are created by invitation — nobody can sign up on their own.",
+    "invite": "Invite user",
+    "searchPlaceholder": "Search name, email or phone",
+    "kinds": {
+      "all": "Everyone",
+      "staff": "Staff",
+      "parent": "Parents"
+    },
+    "allStatuses": "All statuses",
+    "allRoles": "All roles",
+    "columns": {
+      "name": "Name",
+      "roles": "Roles",
+      "status": "Status",
+      "lastLogin": "Last sign-in"
+    },
+    "never": "Never",
+    "editRoles": "Edit roles",
+    "rolesSaved": "Roles updated.",
+    "deactivate": "Deactivate",
+    "deactivateTitle": "Deactivate {name}?",
+    "deactivateBody": "They'll be signed out everywhere and won't be able to sign in. Their records are kept.",
+    "deactivated": "Account deactivated.",
+    "reactivate": "Reactivate",
+    "reactivated": "Account reactivated.",
+    "resend": "Resend invite",
+    "resent": "Invitation re-sent.",
+    "inviteForm": {
+      "title": "Invite a user",
+      "description": "They'll receive an email with a link to set their password.",
+      "kind": "Account type",
+      "name": "Full name",
+      "email": "Email",
+      "phone": "Phone",
+      "designation": "Designation",
+      "designationPlaceholder": "e.g. Teacher – Science",
+      "roles": "Roles",
+      "submit": "Send invitation",
+      "done": "Invitation sent to {email}.",
+      "link": "Invitation link (demo)"
+    }
+  },
+  "roles": {
+    "title": "Roles & permissions",
+    "description": "What each role can see and do. A user can hold several roles; data scope limits which records apply.",
+    "new": "New role",
+    "system": "Built-in",
+    "users": "{count, plural, one {# user} other {# users}}",
+    "scope": "Data scope",
+    "module": "Module",
+    "actions": {
+      "view": "View",
+      "create": "Create",
+      "edit": "Edit",
+      "approve": "Approve"
+    },
+    "modules": {
+      "dashboard": "Dashboard",
+      "admissions": "Admissions",
+      "students": "Students",
+      "classes": "Classes",
+      "attendance": "Attendance",
+      "marks": "Marks",
+      "reportCards": "Report cards",
+      "promotions": "Promotions",
+      "fees": "Fees & invoices",
+      "payments": "Payments",
+      "messaging": "Messages",
+      "users": "Users",
+      "roles": "Roles",
+      "settings": "Settings",
+      "import": "Import",
+      "audit": "Audit log"
+    },
+    "adminLocked": "The Admin role always has full access.",
+    "save": "Save role",
+    "saved": "Role saved.",
+    "delete": "Delete role",
+    "deleteTitle": "Delete the {name} role?",
+    "deleted": "Role deleted.",
+    "name": "Role name",
+    "roleDescription": "Description",
+    "unsaved": "Unsaved changes"
+  },
+  "import": {
+    "title": "Import students",
+    "description": "Bring existing students and guardians in from Excel or CSV. Nothing is saved until you review and confirm.",
+    "step1": "1. Download the template",
+    "step1Body": "Fill one row per student. Class must match an existing class name such as 10-A or 12-PS. Dates use YYYY-MM-DD.",
+    "template": "Download CSV template",
+    "step2": "2. Upload your file",
+    "choose": "Choose CSV file",
+    "sample": "Try with sample data",
+    "parsing": "Checking {count} rows…",
+    "step3": "3. Review",
+    "summary": "{valid} ready to import · {invalid} with errors",
+    "onlyErrors": "Show only rows with problems",
+    "row": "Row",
+    "issues": "Issues",
+    "ok": "Ready",
+    "invite": "Email parent-portal invitations to guardians with an email address",
+    "commit": "Import {count} students",
+    "done": "Imported {created} students ({skipped} skipped, {invited} parents invited).",
+    "notCsv": "Please choose a .csv file. In Excel use File → Save As → CSV.",
+    "empty": "The file has no data rows."
+  },
+  "settings": {
+    "title": "School settings",
+    "description": "School profile, academic calendar, subjects and grading.",
+    "tabs": {
+      "school": "School profile",
+      "calendar": "Academic year",
+      "subjects": "Subjects",
+      "grading": "Grading scale"
+    },
+    "school": {
+      "name": "School name",
+      "shortName": "Short name",
+      "motto": "Motto",
+      "address": "Address",
+      "phone": "Phone",
+      "email": "Email",
+      "website": "Website",
+      "principal": "Principal's name",
+      "smsSender": "SMS sender ID",
+      "smsSenderHint": "3–11 letters or digits. Must be registered with the SMS provider.",
+      "saved": "School profile saved."
+    },
+    "calendar": {
+      "year": "Academic year {name}",
+      "status": "Status",
+      "term": "Term",
+      "start": "Starts",
+      "end": "Ends",
+      "save": "Save dates",
+      "saved": "Term dates saved.",
+      "exams": "Term tests",
+      "addExam": "Schedule term test",
+      "examName": "Name",
+      "examTerm": "Term",
+      "examStart": "From",
+      "examEnd": "To",
+      "examCreated": "Term test scheduled.",
+      "yearStatus": {
+        "upcoming": "Upcoming",
+        "active": "Active",
+        "closed": "Closed"
+      }
+    },
+    "subjects": {
+      "add": "Add subject",
+      "name": "Name",
+      "code": "Code",
+      "levels": "Taught in",
+      "basket": "O/L basket",
+      "core": "Core",
+      "saved": "Subject saved."
+    },
+    "grading": {
+      "description": "Marks out of 100 are converted to these grades on mark sheets and report cards.",
+      "grade": "Grade",
+      "min": "From",
+      "max": "To",
+      "label": "Meaning",
+      "pass": "Pass",
+      "save": "Save grading scale",
+      "saved": "Grading scale saved."
+    }
+  },
+  "audit": {
+    "title": "Audit log",
+    "description": "Who changed what, and when. Entries can't be edited or deleted.",
+    "searchPlaceholder": "Search person or action",
+    "allEntities": "Everything",
+    "columns": {
+      "when": "When",
+      "who": "Who",
+      "what": "What",
+      "area": "Area"
+    }
+  },
+  "profile": {
+    "title": "Your profile",
+    "account": "Account",
+    "roles": "Roles",
+    "password": "Change password",
+    "current": "Current password",
+    "new": "New password",
+    "confirm": "Confirm new password",
+    "submit": "Update password",
+    "done": "Password updated.",
+    "preferences": "Preferences",
+    "theme": "Theme",
+    "language": "Language",
+    "languageSoon": "Sinhala and Tamil are coming soon."
+  }
+}

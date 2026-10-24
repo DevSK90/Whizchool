@@ -1,0 +1,54 @@
+{
+  "greeting": {
+    "morning": "Good morning, {name}",
+    "afternoon": "Good afternoon, {name}",
+    "evening": "Good evening, {name}"
+  },
+  "subtitle": "Here's what's happening at {school} today.",
+  "stats": {
+    "students": "Active students",
+    "studentsHint": "{count} joined this year",
+    "attendance": "Attendance",
+    "attendanceHint": "{marked} of {total} classes marked · {date}",
+    "collected": "Collected this month",
+    "collectedHint": "Fees received in {month}",
+    "outstanding": "Outstanding fees",
+    "outstandingHint": "Across all open invoices",
+    "applications": "Applications to review",
+    "applicationsHint": "New and awaiting interview",
+    "staff": "Staff"
+  },
+  "fees": {
+    "title": "Fee collection",
+    "description": "Payments received per month (LKR)",
+    "view": "Fees overview"
+  },
+  "attendanceTrend": {
+    "title": "Attendance rate",
+    "description": "Whole school, last 15 school days"
+  },
+  "enrollment": {
+    "title": "Enrollment by section",
+    "description": "Active students"
+  },
+  "reports": {
+    "title": "Report cards in progress",
+    "description": "{exam}",
+    "empty": "All report cards for the current term test are released.",
+    "open": "Open"
+  },
+  "applications": {
+    "title": "Recent applications",
+    "empty": "No applications yet."
+  },
+  "tasks": {
+    "title": "Your tasks",
+    "attendanceTodo": "Mark attendance for {className}",
+    "attendanceDone": "Attendance marked for {className}",
+    "marksTodo": "{subject} – {className}: {entered}/{total} marks entered",
+    "marksDone": "All your mark sheets are submitted.",
+    "noTasks": "Nothing pending right now.",
+    "markNow": "Mark now",
+    "enterMarks": "Enter marks"
+  }
+}

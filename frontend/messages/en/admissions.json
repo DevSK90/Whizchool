@@ -1,0 +1,79 @@
+{
+  "title": "Admissions",
+  "description": "Online applications from parents, from first review to enrollment.",
+  "publicForm": "Open public form",
+  "searchPlaceholder": "Search name, ref no. or phone",
+  "allGrades": "All grades",
+  "tabs": {
+    "all": "All"
+  },
+  "columns": {
+    "ref": "Ref no.",
+    "student": "Applicant",
+    "grade": "Grade",
+    "guardian": "Parent / guardian",
+    "submitted": "Submitted",
+    "interview": "Interview",
+    "stage": "Stage"
+  },
+  "empty": {
+    "title": "No applications here",
+    "description": "Applications submitted through the public form appear here."
+  },
+  "detail": {
+    "back": "Admissions",
+    "submitted": "Submitted {date}",
+    "student": "Student",
+    "guardian": "Parent / guardian",
+    "documents": "Documents",
+    "noDocuments": "No documents uploaded.",
+    "previewDemo": "Document preview isn't available in the demo.",
+    "timeline": "History",
+    "interviewAt": "Interview",
+    "fields": {
+      "name": "Name",
+      "gender": "Gender",
+      "dob": "Date of birth",
+      "religion": "Religion",
+      "address": "Address",
+      "previousSchool": "Previous school",
+      "medical": "Medical notes",
+      "relationship": "Relationship",
+      "phone": "Phone",
+      "email": "Email",
+      "nic": "NIC",
+      "occupation": "Occupation"
+    }
+  },
+  "actions": {
+    "schedule": "Schedule interview",
+    "reschedule": "Reschedule",
+    "accept": "Accept",
+    "reject": "Reject",
+    "withdraw": "Mark withdrawn",
+    "enroll": "Enroll student",
+    "viewStudent": "View student profile",
+    "note": "Note",
+    "notePlaceholder": "Optional note for the record",
+    "interviewAt": "Interview date & time",
+    "scheduleTitle": "Schedule interview",
+    "scheduleBody": "The parent sees the interview time on the application status page.",
+    "acceptTitle": "Accept this application?",
+    "acceptBody": "An offer is recorded. You can enroll the student once the parent confirms.",
+    "rejectTitle": "Reject this application?",
+    "rejectBody": "The parent will see that a place couldn't be offered.",
+    "withdrawTitle": "Mark as withdrawn?",
+    "withdrawBody": "Use this when the parent no longer wants a place.",
+    "moved": "Application moved to {stage}."
+  },
+  "enroll": {
+    "title": "Enroll {name}",
+    "body": "Creates the student record, links the guardian and issues the first invoice (admission fee, deposit and this month's tuition).",
+    "class": "Class",
+    "invite": "Email the parent an invitation to the parent portal",
+    "submit": "Enroll",
+    "doneTitle": "Student enrolled",
+    "doneBody": "Admission number {admissionNo}.",
+    "inviteLink": "Parent invitation link (demo)"
+  }
+}

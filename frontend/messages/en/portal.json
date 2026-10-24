@@ -1,0 +1,70 @@
+{
+  "home": {
+    "greeting": "Hello, {name}",
+    "subtitle": "Here's how your children are doing.",
+    "children": "Your children",
+    "attendance": "Attendance",
+    "latest": "Latest average",
+    "rank": "Rank {rank} of {size}",
+    "balance": "Fees due",
+    "overdue": "{amount} overdue",
+    "allPaid": "All paid",
+    "view": "View details",
+    "pay": "Pay fees",
+    "notices": "Notices",
+    "allNotices": "All notices",
+    "noChildren": "No children are linked to your account yet. Please contact the school office."
+  },
+  "child": {
+    "back": "Home",
+    "tabs": {
+      "results": "Results",
+      "attendance": "Attendance",
+      "fees": "Fees"
+    },
+    "fees": {
+      "outstanding": "Outstanding balance",
+      "selectHint": "Select the invoices you want to pay.",
+      "pay": "Pay {amount} online",
+      "payHint": "Card, eZ Cash or bank transfer via PayHere. A receipt is issued immediately.",
+      "orPayAtSchool": "You can also pay at the school office by cash or cheque, or by bank deposit.",
+      "history": "Payment history",
+      "noPayments": "No payments yet.",
+      "redirecting": "Redirecting to PayHere…",
+      "noInvoices": "No invoices yet."
+    }
+  },
+  "pay": {
+    "sandboxTitle": "PayHere sandbox",
+    "sandboxNote": "Demo only — this page stands in for PayHere's secure checkout. No real payment is made.",
+    "merchant": "Paying {merchant}",
+    "order": "Order {order}",
+    "items": "Invoices",
+    "amount": "Amount",
+    "cardNumber": "Card number",
+    "expiry": "Expiry",
+    "cvv": "CVV",
+    "payNow": "Pay {amount}",
+    "cancel": "Cancel payment",
+    "simulateFail": "Simulate declined card",
+    "processing": "Processing payment…",
+    "successTitle": "Payment successful",
+    "successBody": "{amount} paid for {student}. Receipt {receiptNo}.",
+    "failedTitle": "Payment didn't go through",
+    "failedBody": "Your card was not charged. You can try again or pay at the school office.",
+    "cancelledTitle": "Payment cancelled",
+    "cancelledBody": "No payment was made.",
+    "pendingTitle": "Confirming your payment…",
+    "pendingBody": "This usually takes a few seconds.",
+    "viewReceipt": "View receipt",
+    "backToFees": "Back to fees",
+    "tryAgain": "Try again"
+  },
+  "notices": {
+    "title": "Notices",
+    "empty": "No notices right now."
+  },
+  "report": {
+    "back": "Results"
+  }
+}

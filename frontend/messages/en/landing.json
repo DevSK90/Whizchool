@@ -1,0 +1,133 @@
+{
+  "metaTitle": "Admissions and parent portal",
+  "metaDescription": "Apply online, then follow attendance, term-test results, report cards and fee payments from your phone.",
+  "nav": {
+    "apply": "Apply",
+    "status": "Application status",
+    "signIn": "Sign in",
+    "features": "Features",
+    "how": "Admissions",
+    "security": "Security",
+    "contact": "Contact",
+    "menu": "Menu"
+  },
+  "hero": {
+    "eyebrow": "Admissions open for 2026 & 2027",
+    "titleA": "One school. One place.",
+    "titleB": "Every child's progress, clear.",
+    "body": "Apply online and, once enrolled, follow attendance, term-test results, report cards and fee payments — from any phone, in real time.",
+    "apply": "Apply for admission",
+    "signIn": "Parent & staff sign in",
+    "status": "Already applied? Check your status"
+  },
+  "mockup": {
+    "dashboard": "Dashboard",
+    "students": "Active students",
+    "attendance": "Attendance today",
+    "collected": "Collected this month",
+    "feeCollection": "Fee collection",
+    "reportCard": "Term 2 report card",
+    "average": "Average",
+    "rank": "Rank 5 of 26",
+    "smsTitle": "Absence alert sent",
+    "smsBody": "Parent notified by SMS · 7:52 a.m.",
+    "paid": "Paid via PayHere",
+    "paidBody": "October tuition · LKR 19,000"
+  },
+  "pills": {
+    "grades": "Grades 1–13",
+    "streams": "O/L & A/L streams",
+    "payhere": "PayHere payments",
+    "sms": "SMS alerts",
+    "languages": "English · සිංහල · தமிழ்",
+    "mobile": "Works on any phone"
+  },
+  "why": {
+    "eyebrow": "Why Whizchool",
+    "statementA": "A calmer school year for families and staff —",
+    "statementHighlight": "everything in one place",
+    "statementB": ", from the first application to the last report card.",
+    "one": { "title": "One record for every student", "body": "Profile, guardians, class history, results and fees live together — no more files, registers and spreadsheets that disagree." },
+    "two": { "title": "Parents always informed", "body": "An SMS the moment a child is marked absent, report cards in the portal the day they're released, and fee balances you can pay online." },
+    "three": { "title": "Less paperwork for teachers", "body": "Attendance in a minute, marks entered once, ranks and A/B/C/S/W grades calculated automatically for every report card." }
+  },
+  "features": {
+    "eyebrow": "Features",
+    "title": "Everything the school runs on,",
+    "titleB": "beautifully connected.",
+    "body": "From the office to the classroom to the parent's phone — one system, one source of truth.",
+    "results": { "title": "Term tests & report cards", "body": "Teachers enter marks, Whizchool ranks the class, the principal approves and releases — printable report cards in one click." },
+    "attendance": { "title": "Attendance & SMS alerts", "body": "Daily registers per class, with automatic alerts to parents of absent students." },
+    "fees": { "title": "Fees & online payment", "body": "Monthly tuition invoices, discounts, receipts and arrears — pay at school or online with PayHere." },
+    "admissions": { "title": "Online admissions", "body": "Applications move from interview to enrollment, with documents and history in one place." },
+    "portal": { "title": "Parent portal", "body": "Results, attendance and fees for every child on any phone." },
+    "roles": { "title": "Roles & permissions", "body": "Each person sees exactly what their role allows." },
+    "ui": {
+      "markSheet": "Mathematics · 10-A",
+      "submitted": "Submitted",
+      "classAvg": "Class avg.",
+      "present": "Present",
+      "absent": "Absent",
+      "late": "Late",
+      "smsParents": "SMS to parents",
+      "invoice": "Invoice",
+      "paid": "Paid",
+      "due": "Due",
+      "new": "New",
+      "interview": "Interview",
+      "enrolled": "Enrolled",
+      "view": "View",
+      "enter": "Enter marks",
+      "approve": "Approve"
+    }
+  },
+  "how": {
+    "watermark": "Admissions",
+    "eyebrow": "How it works",
+    "title": "From application to first day in 4 steps",
+    "body": "No queues, no paper forms. Apply from home and follow every step online — then use the same account to follow your child's progress.",
+    "cta": "Start your application",
+    "steps": {
+      "one": { "title": "Apply online", "a": "Student & parent details", "b": "Upload birth certificate & photo" },
+      "two": { "title": "Interview", "a": "Date shown on your status page", "b": "Short placement test" },
+      "three": { "title": "Offer", "a": "Decision by the principal", "b": "Confirm your place" },
+      "four": { "title": "Enrollment", "a": "Admission number issued", "b": "Parent-portal invitation" }
+    }
+  },
+  "roles": {
+    "eyebrow": "Built for everyone",
+    "title": "The right view for every role",
+    "body": "Parents, teachers, the office and the principal each get a workspace designed around their day.",
+    "parents": { "title": "Parents", "body": "Results, attendance, notices and online fee payment for all your children." },
+    "teachers": { "title": "Teachers", "body": "Take attendance, enter marks and write report-card remarks in minutes." },
+    "office": { "title": "Office & bursar", "body": "Admissions, student records, invoices, receipts and reminders." },
+    "principal": { "title": "Principal", "body": "Approve results, release report cards and see the whole school at a glance." }
+  },
+  "security": {
+    "eyebrow": "Security & privacy",
+    "title": "Your children's data, protected",
+    "body": "Built around Sri Lanka's Personal Data Protection Act from day one.",
+    "access": { "title": "Role-based access", "body": "Teachers only see their own classes; parents only their own children." },
+    "audit": { "title": "Full audit trail", "body": "Every change to marks, fees and records is logged — who, what and when." },
+    "payments": { "title": "Secure payments", "body": "Card payments run on PayHere and are verified before a receipt is issued." },
+    "records": { "title": "Nothing is lost", "body": "Records are archived, never deleted, and backed up every night." }
+  },
+  "cta": {
+    "title": "Ready to join us?",
+    "body": "Applications for 2026 and 2027 are open. It takes about ten minutes.",
+    "apply": "Apply for admission",
+    "status": "Check application status"
+  },
+  "contact": {
+    "title": "Contact the school office",
+    "hours": "Office hours: Monday–Friday, 7.30 a.m. – 3.30 p.m."
+  },
+  "footer": {
+    "rights": "Powered by Whizchool",
+    "privacy": "Student data is handled in line with Sri Lanka's Personal Data Protection Act.",
+    "tagline": "School management for Sri Lankan schools — admissions, results, fees and a parent portal in one place.",
+    "school": "School",
+    "parents": "Parents",
+    "portal": "Parent portal"
+  }
+}

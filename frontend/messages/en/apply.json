@@ -1,0 +1,134 @@
+{
+  "metaTitle": "Apply for admission",
+  "title": "Apply for admission",
+  "subtitle": "It takes about 10 minutes. Keep the birth certificate and a recent photo ready.",
+  "steps": {
+    "student": "Student",
+    "guardian": "Parent / guardian",
+    "documents": "Documents",
+    "review": "Review",
+    "done": "Confirmation"
+  },
+  "stepOf": "Step {step} of {total}",
+  "student": {
+    "grade": "Grade applying for",
+    "firstName": "First name",
+    "lastName": "Surname",
+    "gender": "Gender",
+    "dob": "Date of birth",
+    "religion": "Religion",
+    "address": "Home address",
+    "previousSchool": "Current / previous school",
+    "medical": "Medical conditions or allergies",
+    "medicalHint": "Anything the school should know to keep your child safe."
+  },
+  "guardian": {
+    "name": "Full name",
+    "namePlaceholder": "e.g. Mrs. Dilani Perera",
+    "relationship": "Relationship to student",
+    "phone": "Mobile number",
+    "phonePlaceholder": "77 123 4567",
+    "email": "Email",
+    "emailHint": "We'll send your reference number and updates here.",
+    "nic": "NIC number",
+    "occupation": "Occupation",
+    "countryCode": "LK +94"
+  },
+  "documents": {
+    "title": "Upload documents",
+    "hint": "PDF, JPG or PNG, up to 5 MB each.",
+    "birth_certificate": "Birth certificate",
+    "photo": "Recent photograph",
+    "report": "Latest school report",
+    "choose": "Choose file",
+    "replace": "Replace",
+    "tooLarge": "{name} is larger than 5 MB.",
+    "badType": "{name} isn't a PDF, JPG or PNG.",
+    "birthRequired": "The birth certificate is required.",
+    "upload": "Click to upload",
+    "formats": "PDF, JPG or PNG · max 5 MB",
+    "required": "Required",
+    "optional": "Optional"
+  },
+  "review": {
+    "title": "Check your details",
+    "edit": "Edit",
+    "consent": "I confirm the information is correct and agree that the school may store it to process this application.",
+    "consentRequired": "Please confirm to continue."
+  },
+  "submit": "Submit application",
+  "submitting": "Submitting…",
+  "success": {
+    "title": "Application received",
+    "body": "Your reference number is {refNo}. We've emailed it to {email}. The school office will contact you to arrange an interview.",
+    "status": "Track application status",
+    "home": "Back to home",
+    "next": "What happens next",
+    "steps": {
+      "one": "The office reviews your application within a week.",
+      "two": "You receive an interview date by email and SMS.",
+      "three": "After acceptance, you get a parent-portal invitation."
+    }
+  },
+  "validation": {
+    "required": "Required",
+    "phone": "Enter a 9-digit mobile number, e.g. 77 123 4567",
+    "email": "Enter a valid email address",
+    "dob": "Enter a valid date of birth"
+  },
+  "status": {
+    "metaTitle": "Application status",
+    "title": "Check application status",
+    "subtitle": "Enter the reference number from your confirmation email and the email you applied with.",
+    "refNo": "Reference number",
+    "refPlaceholder": "APP-2026-0301",
+    "email": "Email",
+    "submit": "Check status",
+    "notFound": "We couldn't find an application with those details. Check the reference number and email.",
+    "applicant": "Applicant",
+    "submitted": "Submitted",
+    "interview": "Interview scheduled",
+    "currentStage": "Current stage",
+    "timeline": "Progress",
+    "next": {
+      "new": "The school office is reviewing your application. You'll be contacted within a week.",
+      "interview": "Please attend the interview and placement test with your child at the time shown.",
+      "accepted": "Congratulations! The office will contact you to complete enrollment and fee payment.",
+      "rejected": "Unfortunately we cannot offer a place this time. Please contact the office for details.",
+      "enrolled": "Your child is enrolled. Check your email for the parent portal invitation.",
+      "withdrawn": "This application was withdrawn."
+    }
+  },
+  "stepHints": {
+    "student": "Who is applying",
+    "guardian": "How we can reach you",
+    "documents": "Certificates & photo",
+    "review": "Check and submit",
+    "done": "Your reference number"
+  },
+  "sidebar": {
+    "title": "Apply for admission",
+    "body": "About 10 minutes. Keep the birth certificate and a recent photo ready.",
+    "help": "Need help?",
+    "call": "Call the school office on {phone}"
+  },
+  "sections": {
+    "grade": "Grade applying for",
+    "personal": "Student details",
+    "address": "Home address",
+    "background": "Health & previous school",
+    "guardian": "Parent / guardian",
+    "contact": "Contact details",
+    "more": "More about you (optional)",
+    "documents": "Supporting documents",
+    "review": "Review your application"
+  },
+  "help": {
+    "phone": "A mobile number — we send interview reminders by SMS.",
+    "email": "Your reference number and updates are emailed here.",
+    "medical": "Anything the school should know to keep your child safe.",
+    "nic": "New 12-digit or old 9-digit + V format."
+  },
+  "next": "Next",
+  "back": "Back"
+}
