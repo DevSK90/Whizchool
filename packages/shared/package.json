@@ -1,0 +1,14 @@
+{
+  "name": "@whizchool/shared",
+  "version": "0.0.0",
+  "private": true,
+  "description": "API contract types, permission keys and domain rules shared by the web app and the API.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p ."
+  }
+}

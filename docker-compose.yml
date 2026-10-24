@@ -1,0 +1,29 @@
+# Local services for development: `npm run db:up`.
+services:
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: whizchool
+      POSTGRES_PASSWORD: whizchool
+      POSTGRES_DB: whizchool
+    ports:
+      # 5433 so it can run beside a natively installed Postgres on 5432.
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql
+      - ./docker/postgres-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U whizchool -d whizchool"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  # Catches all outgoing email in dev: SMTP on 1025, inbox UI at http://localhost:8025.
+  mailpit:
+    image: axllent/mailpit:latest
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+volumes:
+  pgdata:

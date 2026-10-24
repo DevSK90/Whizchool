@@ -1,0 +1,29 @@
+{
+  "name": "whizchool",
+  "private": true,
+  "description": "School management for Sri Lankan schools: admissions, records, attendance, results, fees and a parent portal.",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "dev": "concurrently -k -n api,web -c blue,magenta \"npm run dev -w @whizchool/api\" \"npm run dev -w @whizchool/web\"",
+    "dev:web": "npm run dev -w @whizchool/web",
+    "dev:api": "npm run dev -w @whizchool/api",
+    "build": "npm run build --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "db:up": "docker compose up -d --wait",
+    "db:down": "docker compose down",
+    "db:migrate": "npm run db:migrate -w @whizchool/api",
+    "db:seed": "npm run db:seed -w @whizchool/api",
+    "db:reset": "npm run db:reset -w @whizchool/api"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.6"
+  }
+}
