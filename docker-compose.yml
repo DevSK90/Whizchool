@@ -18,11 +18,12 @@ services:
       timeout: 3s
       retries: 30
 
-  # Catches all outgoing email in dev: SMTP on 1025, inbox UI at http://localhost:8025.
+  # Catches all outgoing email in dev: SMTP on localhost:2525, inbox UI at http://localhost:8025.
   mailpit:
     image: axllent/mailpit:latest
     ports:
-      - "1025:1025"
+      # Host port 2525, not 1025: on Windows 1025 can belong to a system RPC service.
+      - "2525:1025"
       - "8025:8025"
 
 volumes:

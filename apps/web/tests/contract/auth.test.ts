@@ -6,7 +6,7 @@ beforeAll(() => resetData());
 describe("auth", () => {
   it("rejects anonymous requests with 401 and bad passwords with 401", async () => {
     await expectStatus(401, get("/auth/me"));
-    await expectStatus(401, get("/students"));
+    await expectStatus(401, get("/users"));
     await expectStatus(401, login("admin", "wrong-password"));
   });
 

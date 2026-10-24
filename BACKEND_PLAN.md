@@ -141,3 +141,19 @@ Estimates are for one developer. Each phase ends with its contract tests passing
 | Collect the school's current report card (fields, signatures, ranking rules) | Phase 5 |
 | Get an anonymised export of existing student records, to shape the importer | Phase 3 |
 | Choose a VPS provider (about 2 vCPU / 4 GB RAM) and a domain | Phase 8 |
+
+## 7. Progress
+
+| Phase | Status | Notes |
+|---|---|---|
+| 0 Foundation | Done (2026-10-24) | Monorepo, schema, seed, CI, two-target contract suite |
+| 1 Auth and access | Done (2026-10-24) | Sessions, invites, password reset/change, users, roles, audit log, data-scope helpers, rate limits, email (Mailpit/Resend) |
+
+**Contract coverage over HTTP:** `auth`, `admin`. The list lives in `apps/web/vitest.config.ts` (`API_CONTRACTS`); add each area's file as its phase lands.
+
+**Carried forward:**
+
+- **Email on the job queue (Phase 4).** Invites and resets send inline with 5-second SMTP timeouts; failures are logged to the EventLog but not retried yet.
+- **Idempotency keys (Phases 3 and 6).** The `IdempotencyKey` table exists; the middleware arrives with the first routes that need it (applications, imports, payments).
+- **Production bootstrap (Phase 8).** Production can't use the demo seed, so it needs a one-off command that creates the school, the built-in roles and the first admin (who then receives an invite).
+- **Faster contract resets.** Each contract file re-seeds the demo school over HTTP (about 30 s). The API tests already clone a template database; the reset route can do the same once the suite grows.

@@ -1,4 +1,5 @@
 import { defineConfig } from "vitest/config";
+import { ORIGIN, TEST_DATABASE_URL } from "./test/env";
 
 export default defineConfig({
   test: {
@@ -6,11 +7,14 @@ export default defineConfig({
     environment: "node",
     env: {
       NODE_ENV: "test",
-      // A separate database so tests never touch dev data (created by docker/postgres-init.sql).
-      DATABASE_URL: process.env.TEST_DATABASE_URL ?? "postgresql://whizchool:whizchool@localhost:5433/whizchool_test",
-      APP_ORIGINS: "http://localhost:3000",
+      DATABASE_URL: TEST_DATABASE_URL,
+      APP_URL: ORIGIN,
+      EMAIL_TRANSPORT: "log",
       LOG_LEVEL: "silent",
     },
     globalSetup: ["test/global-setup.ts"],
+    // Test files share one database; run them one at a time so they can't trip over each other.
+    fileParallelism: false,
+    testTimeout: 20_000,
   },
 });

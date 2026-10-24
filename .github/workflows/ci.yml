@@ -52,6 +52,17 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test -w @whizchool/api
+      # The web app's contract suite over HTTP, against a real API with the test reset route.
+      - name: Contract tests against the real API
+        env:
+          CONTRACT_DB: postgresql://whizchool:whizchool@localhost:5432/whizchool_contract
+        run: |
+          psql "postgresql://whizchool:whizchool@localhost:5432/postgres" -c "CREATE DATABASE whizchool_contract"
+          (cd apps/api && DATABASE_URL=$CONTRACT_DB npx prisma migrate deploy)
+          (cd apps/api && NODE_ENV=test PORT=4100 DATABASE_URL=$CONTRACT_DB APP_URL=http://localhost:3000 \
+            EMAIL_TRANSPORT=log ENABLE_TEST_ROUTES=true LOG_LEVEL=warn node --import tsx src/main.ts &)
+          for i in $(seq 1 30); do curl -sf http://localhost:4100/api/v1/health && break; sleep 1; done
+          CONTRACT_API_URL=http://localhost:4100/api/v1 npm run test:contract:api -w @whizchool/web
       - run: npm run build -w @whizchool/api
 
   e2e:

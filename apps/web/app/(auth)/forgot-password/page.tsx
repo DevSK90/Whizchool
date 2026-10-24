@@ -18,13 +18,16 @@ import { applyServerErrors } from "@/lib/forms";
 export default function ForgotPasswordPage() {
   const t = useTranslations("auth");
   const [sentTo, setSentTo] = useState<string | null>(null);
+  // Development only: the API returns the link instead of making you open Mailpit; the demo has a fixed token.
+  const [devLink, setDevLink] = useState<string | null>(null);
   const schema = z.object({ email: z.email(t("validation.email")) });
   const form = useForm<z.infer<typeof schema>>({ resolver: zodResolver(schema), defaultValues: { email: "" } });
   const { errors, isSubmitting } = form.formState;
 
   const onSubmit = form.handleSubmit(async (values) => {
     try {
-      await api.post("/auth/forgot-password", values);
+      const res = await api.post<{ ok: true; resetLink?: string }>("/auth/forgot-password", values);
+      setDevLink(res.resetLink ?? (API_MODE === "mock" ? "/reset-password?token=demo-reset-token" : null));
       setSentTo(values.email);
     } catch (e) {
       applyServerErrors(e, form.setError);
@@ -40,9 +43,9 @@ export default function ForgotPasswordPage() {
           <CardDescription>{t("forgot.sentBody", { email: sentTo })}</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-2">
-          {API_MODE === "mock" && (
+          {devLink && (
             <Button variant="outline" asChild>
-              <Link href="/reset-password?token=demo-reset-token">{t("forgot.demoLink")}</Link>
+              <Link href={devLink}>{t("forgot.demoLink")}</Link>
             </Button>
           )}
           <Button variant="ghost" asChild>

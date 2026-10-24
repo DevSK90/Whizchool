@@ -1,4 +1,6 @@
 import { prisma } from "../db";
+import { sentEmails } from "../email/mailer";
+import { resetRateLimits } from "../http/rate-limit";
 import { defineRoute } from "../http/route";
 import { logger } from "../logger";
 import { seedDemoSchool } from "../seed/demo-school";
@@ -12,6 +14,8 @@ export const testSupportRoutes = [
     summary: "Wipe the database and reload the demo school (contract tests)",
     handler: async () => {
       logger.info(await seedDemoSchool(prisma));
+      resetRateLimits();
+      sentEmails.length = 0;
       return undefined;
     },
   }),

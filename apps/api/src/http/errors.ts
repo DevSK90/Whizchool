@@ -29,5 +29,7 @@ export const errorHandler: ErrorRequestHandler = (err, req, res, _next) => {
     error = new ApiError(500, "internal", "Something went wrong. Please try again.");
   }
   if (res.headersSent) return;
+  const retryAfter = (err as { retryAfter?: number }).retryAfter;
+  if (retryAfter) res.set("Retry-After", String(retryAfter));
   res.status(error.status).json(error.toBody());
 };

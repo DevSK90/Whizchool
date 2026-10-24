@@ -3,6 +3,7 @@ import helmet from "helmet";
 import { pinoHttp } from "pino-http";
 import { config } from "./config";
 import { errorHandler, notFound } from "./http/errors";
+import { sessionMiddleware } from "./auth/session";
 import { originCheck } from "./http/origin";
 import { mountRoutes } from "./http/route";
 import { logger } from "./logger";
@@ -24,6 +25,7 @@ export function createApp() {
   const api = express.Router();
   api.use(express.json({ limit: "1mb" }));
   api.use(originCheck(config.APP_ORIGINS));
+  api.use(sessionMiddleware);
   mountRoutes(api, routes);
   api.use(notFound);
 

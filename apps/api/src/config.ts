@@ -8,41 +8,81 @@ if (process.env.NODE_ENV !== "test") {
   }
 }
 
+const bool = (fallback: "true" | "false") =>
+  z
+    .enum(["true", "false"])
+    .default(fallback)
+    .transform((v) => v === "true");
+
 const schema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   PORT: z.coerce.number().int().positive().default(4000),
   DATABASE_URL: z.url({ protocol: /^postgres(ql)?$/ }),
-  /** Comma-separated origins allowed to send state-changing requests (CSRF check). */
+  /** Public URL of the web app; links in emails point here. */
+  APP_URL: z
+    .url()
+    .default("http://localhost:3000")
+    .transform((u) => u.replace(/\/+$/, "")),
+  /** Comma-separated origins allowed to send state-changing requests (CSRF check). Defaults to APP_URL's origin. */
   APP_ORIGINS: z
     .string()
-    .min(1)
-    .transform((s) => s.split(",").map((o) => o.trim().replace(/\/+$/, ""))),
+    .optional()
+    .transform((s) => s?.split(",").map((o) => o.trim().replace(/\/+$/, "")).filter(Boolean)),
   /** Express "trust proxy": false, true, or the number of proxy hops (1 behind Caddy). */
   TRUST_PROXY: z
     .string()
     .default("false")
     .transform((v) => (v === "true" ? true : v === "false" ? false : Number(v))),
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"]).default("info"),
+  /** Session cookie gets the Secure flag (HTTPS only). Defaults to true in production. */
+  COOKIE_SECURE: z.enum(["true", "false"]).optional(),
+
+  /** "smtp" (Mailpit in development), "resend" (production) or "log" (tests: kept in memory). */
+  EMAIL_TRANSPORT: z.enum(["smtp", "resend", "log"]).optional(),
+  EMAIL_FROM: z.string().default("Whizchool <no-reply@whizchool.lk>"),
+  SMTP_URL: z.string().default("smtp://localhost:2525"),
+  RESEND_API_KEY: z.string().optional(),
+
+  /**
+   * Also return invite/reset links in API responses so they can be opened without an inbox
+   * (the demo UI shows them). Development and tests only; refused in production.
+   */
+  EXPOSE_DEV_LINKS: z.enum(["true", "false"]).optional(),
+  /** Per-IP limits on sign-in, password reset and other abuse-prone endpoints. */
+  RATE_LIMITS: bool("true"),
   /** Mounts /api/v1/test/* (database reset for the contract suite). Refused in production. */
-  ENABLE_TEST_ROUTES: z
-    .enum(["true", "false"])
-    .default("false")
-    .transform((v) => v === "true"),
+  ENABLE_TEST_ROUTES: bool("false"),
 });
 
-export type Config = z.infer<typeof schema>;
-
-function load(): Config {
+function load() {
   const parsed = schema.safeParse(process.env);
   if (!parsed.success) {
     const problems = parsed.error.issues.map((i) => `  ${i.path.join(".")}: ${i.message}`).join("\n");
     throw new Error(`Invalid environment configuration:\n${problems}\nSee apps/api/.env.example.`);
   }
-  if (parsed.data.NODE_ENV === "production" && parsed.data.ENABLE_TEST_ROUTES) {
-    throw new Error("ENABLE_TEST_ROUTES must not be set in production: it allows wiping the database.");
+  const env = parsed.data;
+  const production = env.NODE_ENV === "production";
+  const config = {
+    ...env,
+    APP_ORIGINS: env.APP_ORIGINS?.length ? env.APP_ORIGINS : [new URL(env.APP_URL).origin],
+    COOKIE_SECURE: env.COOKIE_SECURE ? env.COOKIE_SECURE === "true" : production,
+    EMAIL_TRANSPORT: env.EMAIL_TRANSPORT ?? (production ? "resend" : env.NODE_ENV === "test" ? "log" : "smtp"),
+    EXPOSE_DEV_LINKS: env.EXPOSE_DEV_LINKS ? env.EXPOSE_DEV_LINKS === "true" : !production,
+  };
+  if (production) {
+    const unsafe = [
+      config.ENABLE_TEST_ROUTES && "ENABLE_TEST_ROUTES (allows wiping the database)",
+      config.EXPOSE_DEV_LINKS && "EXPOSE_DEV_LINKS (leaks invite and reset links)",
+      !config.COOKIE_SECURE && "COOKIE_SECURE=false (session cookie over plain HTTP)",
+    ].filter(Boolean);
+    if (unsafe.length) throw new Error(`Unsafe production configuration: ${unsafe.join("; ")}.`);
   }
-  return parsed.data;
+  if (config.EMAIL_TRANSPORT === "resend" && !config.RESEND_API_KEY) {
+    throw new Error("EMAIL_TRANSPORT=resend needs RESEND_API_KEY.");
+  }
+  return config;
 }
 
 export const config = load();
+export type Config = typeof config;
 export const isProduction = config.NODE_ENV === "production";

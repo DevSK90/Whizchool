@@ -131,7 +131,10 @@ function UserActions({ user, onEditRoles }: { user: UserRow; onEditRoles: () => 
   const inv = [["users"], ["roles"]];
   const deactivate = useApiMutation(() => api.post(`/users/${user.id}/deactivate`), { invalidate: inv, success: t("deactivated") });
   const reactivate = useApiMutation(() => api.post(`/users/${user.id}/reactivate`), { invalidate: inv, success: t("reactivated") });
-  const resend = useApiMutation(() => api.post<{ inviteLink: string }>(`/users/${user.id}/resend-invite`), { success: (r) => `${t("resent")} ${r.inviteLink}` });
+  const resend = useApiMutation(() => api.post<{ inviteLink?: string }>(`/users/${user.id}/resend-invite`), {
+    // The link comes back only in development; in production it goes by email alone.
+    success: (r) => (r.inviteLink ? `${t("resent")} ${r.inviteLink}` : t("resent")),
+  });
   const [confirmOpen, setConfirmOpen] = useState(false);
   return (
     <>
@@ -213,11 +216,12 @@ function InviteDialog({ roles }: { roles: Role[] }) {
   const [form, setForm] = useState(empty);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [link, setLink] = useState<string | null>(null);
-  const invite = useApiMutation(() => api.post<{ inviteLink: string }>("/users/invite", form), {
+  const invite = useApiMutation(() => api.post<{ inviteLink?: string }>("/users/invite", form), {
     invalidate: [["users"], ["roles"]],
     success: t("inviteForm.done", { email: form.email }),
     toastError: false,
-    onSuccess: (r) => setLink(r.inviteLink),
+    // Development shows the link; in production the invitation goes by email only, so just close.
+    onSuccess: (r) => (r.inviteLink ? setLink(r.inviteLink) : setOpen(false)),
   });
   const available = roles.filter((r) => (form.kind === "parent" ? r.scope === "own_children" : r.scope !== "own_children"));
   const field = (key: "name" | "email" | "phone" | "designation", label: string, type = "text", placeholder?: string) => (

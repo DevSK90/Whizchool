@@ -23,7 +23,7 @@ function appWith(routes: Parameters<typeof mountRoutes>[1]) {
   const app = express();
   app.use(express.json());
   app.use((req, res, next) => {
-    if (req.get("x-test-session")) res.locals.session = teacher;
+    if (req.get("x-test-session")) res.locals.auth = { sessionId: null, session: teacher, fullScope: new Set(), subjectClassIds: [] };
     next();
   });
   const router = express.Router();

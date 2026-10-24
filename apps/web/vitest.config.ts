@@ -1,11 +1,14 @@
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 
-// `--mode api` runs the contract tests over HTTP against the real API (see tests/contract/helpers.ts).
+// Contract files the real API already passes. Add each area as its phase lands (BACKEND_PLAN.md §5).
+const API_CONTRACTS = ["tests/contract/auth.test.ts", "tests/contract/admin.test.ts"];
+
+// `--mode api` runs those contract tests over HTTP against the real API (see tests/contract/helpers.ts).
 export default defineConfig(({ mode }) => ({
   resolve: { alias: { "@": fileURLToPath(new URL("./", import.meta.url)) } },
   test: {
-    include: mode === "api" ? ["tests/contract/**/*.test.ts"] : ["tests/unit/**/*.test.ts", "tests/contract/**/*.test.ts"],
+    include: mode === "api" ? API_CONTRACTS : ["tests/unit/**/*.test.ts", "tests/contract/**/*.test.ts"],
     environment: "node",
     setupFiles: ["tests/setup.ts"],
     env: mode === "api" ? { CONTRACT_TARGET: "http" } : {},

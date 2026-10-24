@@ -23,7 +23,7 @@ Prerequisites: Node 24+, Docker Desktop.
 ```bash
 npm install
 cp apps/api/.env.example apps/api/.env
-npm run db:up        # Postgres 18 on localhost:5433 and Mailpit (http://localhost:8025)
+npm run db:up        # Postgres 18 on localhost:5433; Mailpit SMTP on 2525, inbox at http://localhost:8025
 npm run db:migrate   # apply migrations
 npm run db:seed      # load the demo school (~650 students), about 30 seconds
 npm run dev          # API on :4000 and web on :3000
