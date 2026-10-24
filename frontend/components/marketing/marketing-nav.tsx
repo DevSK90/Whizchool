@@ -23,6 +23,7 @@ function subscribeScroll(onChange: () => void) {
 
 export function MarketingNav() {
   const t = useTranslations("landing.nav");
+  const ta = useTranslations("common");
   const scrolled = useSyncExternalStore(subscribeScroll, () => window.scrollY > 12, () => false);
   const [open, setOpen] = useState(false);
 
@@ -34,10 +35,10 @@ export function MarketingNav() {
       )}
     >
       <div className="mx-auto flex h-16 max-w-6xl items-center gap-6 px-4 sm:px-6">
-        <Link href="/" aria-label="Whizchool home" className="text-white">
+        <Link href="/" aria-label={ta("a11y.home", { app: ta("appName") })} className="text-white">
           <Logo />
         </Link>
-        <nav aria-label="Main" className="hidden flex-1 items-center justify-center gap-1 md:flex">
+        <nav aria-label={ta("a11y.mainNav")} className="hidden flex-1 items-center justify-center gap-1 md:flex">
           {LINKS.map((l) => (
             <a key={l.href} href={l.href} className="rounded-full px-3.5 py-2 text-sm text-white/65 transition-colors hover:bg-white/5 hover:text-white">
               {t(l.key)}
@@ -65,7 +66,7 @@ export function MarketingNav() {
                   <Logo />
                 </SheetTitle>
               </SheetHeader>
-              <nav aria-label="Mobile" className="flex flex-col gap-1 px-4">
+              <nav aria-label={ta("a11y.mobileNav")} className="flex flex-col gap-1 px-4">
                 {LINKS.map((l) => (
                   <a key={l.href} href={l.href} onClick={() => setOpen(false)} className="rounded-lg px-3 py-2.5 text-white/80 hover:bg-white/5">
                     {t(l.key)}

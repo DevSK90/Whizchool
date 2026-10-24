@@ -3,8 +3,7 @@
 import { use, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Banknote, Pencil, UserCog } from "lucide-react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Banknote, Pencil, Trash2, UserCog } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,11 +13,15 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { DetailList } from "@/components/shared/detail-list";
 import { PageHeader } from "@/components/shared/page-header";
 import { EmptyState, ErrorState, PageSkeleton } from "@/components/shared/states";
 import { StatusBadge } from "@/components/shared/status-badge";
+import { AddGuardianDialog } from "@/components/students/add-guardian-dialog";
 import { StudentAttendanceView } from "@/components/students/attendance-view";
+import { DocumentsPanel } from "@/components/students/documents-panel";
+import { StudentPhoto } from "@/components/students/student-photo";
 import { StudentResultsView } from "@/components/students/results-view";
 import { InvoiceList } from "@/components/fees/invoice-list";
 import { RecordPaymentDialog } from "@/components/fees/record-payment-dialog";
@@ -26,7 +29,7 @@ import { api, ApiError } from "@/lib/api/client";
 import { useApiMutation, useStudent, useStudentInvoices } from "@/lib/api/hooks";
 import type { Guardian, StudentDetail, StudentStatus } from "@/lib/api/types";
 import { useCan } from "@/lib/auth";
-import { formatDate, formatMoney, initials, toISODate } from "@/lib/format";
+import { formatDate, formatMoney, toISODate } from "@/lib/format";
 import { DatePicker } from "@/components/shared/date-picker";
 
 export default function StudentProfilePage({ params }: PageProps<"/app/students/[id]">) {
@@ -46,9 +49,7 @@ export default function StudentProfilePage({ params }: PageProps<"/app/students/
         back={{ href: "/app/students", label: t("back") }}
         title={
           <span className="flex flex-wrap items-center gap-3">
-            <Avatar className="size-10">
-              <AvatarFallback className="bg-primary/10 text-primary">{initials(s.fullName)}</AvatarFallback>
-            </Avatar>
+            <StudentPhoto studentId={s.id} name={s.fullName} photoUrl={s.photoUrl} editable={can("students.edit")} className="size-12" />
             {s.fullName}
             <StatusBadge kind="student" status={s.status} />
           </span>
@@ -92,6 +93,7 @@ export default function StudentProfilePage({ params }: PageProps<"/app/students/
           <TabsTrigger value="attendance">{t("tabs.attendance")}</TabsTrigger>
           <TabsTrigger value="results">{t("tabs.results")}</TabsTrigger>
           {can("fees.view") && <TabsTrigger value="fees">{t("tabs.fees")}</TabsTrigger>}
+          <TabsTrigger value="documents">{t("tabs.documents")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="grid gap-6 lg:grid-cols-3">
@@ -173,10 +175,17 @@ export default function StudentProfilePage({ params }: PageProps<"/app/students/
           </div>
         </TabsContent>
 
-        <TabsContent value="guardians" className="grid gap-4 md:grid-cols-2">
-          {s.guardians.map((g) => (
-            <GuardianCard key={g.id} guardian={g} studentId={s.id} canEdit={can("students.edit")} />
-          ))}
+        <TabsContent value="guardians" className="space-y-4">
+          {can("students.edit") && (
+            <div className="flex justify-end">
+              <AddGuardianDialog studentId={s.id} />
+            </div>
+          )}
+          <div className="grid gap-4 md:grid-cols-2">
+            {s.guardians.map((g) => (
+              <GuardianCard key={g.id} guardian={g} studentId={s.id} canEdit={can("students.edit")} canRemove={s.guardians.length > 1} />
+            ))}
+          </div>
         </TabsContent>
 
         <TabsContent value="attendance">{tab === "attendance" && <StudentAttendanceView studentId={s.id} />}</TabsContent>
@@ -184,6 +193,9 @@ export default function StudentProfilePage({ params }: PageProps<"/app/students/
           {tab === "results" && <StudentResultsView studentId={s.id} reportHref={(examId) => `/app/report-cards/${examId}/student/${s.id}`} />}
         </TabsContent>
         {can("fees.view") && <TabsContent value="fees">{tab === "fees" && <StudentFees student={s} />}</TabsContent>}
+        <TabsContent value="documents">
+          <DocumentsPanel studentId={s.id} documents={s.documents} editable={can("students.edit")} />
+        </TabsContent>
       </Tabs>
     </>
   );
@@ -207,8 +219,9 @@ function StudentFees({ student }: { student: StudentDetail }) {
   return <InvoiceList invoices={data} href={(inv) => `/app/fees/invoices/${inv.id}`} />;
 }
 
-function GuardianCard({ guardian: g, studentId, canEdit }: { guardian: Guardian; studentId: string; canEdit: boolean }) {
+function GuardianCard({ guardian: g, studentId, canEdit, canRemove }: { guardian: Guardian; studentId: string; canEdit: boolean; canRemove: boolean }) {
   const t = useTranslations("students.profile");
+  const tg = useTranslations("students.guardians");
   const ts = useTranslations("status");
   const tc = useTranslations("common");
   const [form, setForm] = useState(g);
@@ -219,6 +232,10 @@ function GuardianCard({ guardian: g, studentId, canEdit }: { guardian: Guardian;
     success: t("guardianSaved"),
     toastError: false,
     onSuccess: () => setOpen(false),
+  });
+  const remove = useApiMutation(() => api.delete(`/students/${studentId}/guardians/${g.id}`), {
+    invalidate: [["student", studentId], ["students"]],
+    success: tg("removed"),
   });
   const field = (key: keyof Guardian, label: string, type = "text") => (
     <Field data-invalid={!!errors[key]}>
@@ -231,7 +248,21 @@ function GuardianCard({ guardian: g, studentId, canEdit }: { guardian: Guardian;
     <Card>
       <CardHeader>
         <CardTitle>{g.name}</CardTitle>
-        <CardAction>
+        <CardAction className="flex items-center gap-1">
+          {canEdit && canRemove && (
+            <ConfirmDialog
+              trigger={
+                <Button variant="ghost" size="icon-sm" aria-label={tg("remove")}>
+                  <Trash2 />
+                </Button>
+              }
+              title={tg("removeTitle", { name: g.name })}
+              description={tg("removeBody")}
+              confirmLabel={tg("remove")}
+              destructive
+              onConfirm={() => remove.mutateAsync(undefined)}
+            />
+          )}
           {canEdit && (
             <Dialog open={open} onOpenChange={(o) => (setOpen(o), o && (setForm(g), setErrors({})))}>
               <DialogTrigger asChild>

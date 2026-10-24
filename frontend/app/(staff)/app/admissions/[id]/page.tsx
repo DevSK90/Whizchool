@@ -335,7 +335,7 @@ function EnrollDialog({ app, showTrigger }: { app: Application & { gradeName?: s
                   <SelectContent>
                     {options.map((c) => (
                       <SelectItem key={c.id} value={c.id}>
-                        {c.name} · {c.studentCount} students{c.streamName ? ` · ${c.streamName}` : ""}
+                        {c.name} · {tc("studentCount", { count: c.studentCount })}{c.streamName ? ` · ${c.streamName}` : ""}
                       </SelectItem>
                     ))}
                   </SelectContent>

@@ -21,6 +21,7 @@ import { useUrlState } from "@/hooks/use-url-state";
 export default function DefaultersPage() {
   const t = useTranslations("fees.defaulters");
   const tst = useTranslations("students");
+  const tc = useTranslations("common");
   const can = useCan();
   const url = useUrlState<"search" | "classId">();
   const classes = useClasses();
@@ -84,7 +85,7 @@ export default function DefaultersPage() {
             key: "sel",
             header: (
               <Checkbox
-                aria-label="Select all"
+                aria-label={tc("a11y.selectAll")}
                 checked={rows.length > 0 && selected.length === rows.length}
                 onCheckedChange={(c) => setSelected(c ? rows.map((r) => r.studentId) : [])}
               />

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { CalendarCheck, ChevronRight, GraduationCap, Pin, Wallet } from "lucide-react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CardsSkeleton, EmptyState, ErrorState } from "@/components/shared/states";
@@ -39,6 +39,7 @@ export default function PortalHomePage() {
               <CardHeader>
                 <div className="flex items-center gap-3">
                   <Avatar className="size-11">
+                    {c.photoUrl && <AvatarImage src={c.photoUrl} alt="" className="object-cover" />}
                     <AvatarFallback className="bg-primary/10 font-medium text-primary">{initials(c.fullName)}</AvatarFallback>
                   </Avatar>
                   <div>

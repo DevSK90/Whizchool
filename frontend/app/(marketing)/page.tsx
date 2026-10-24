@@ -30,6 +30,7 @@ export const metadata: Metadata = {
   title: t("landing.metaTitle"),
   description: t("landing.metaDescription"),
   robots: { index: true, follow: true },
+  alternates: { canonical: "/" },
   openGraph: {
     title: `${t("landing.hero.titleA")} ${t("landing.hero.titleB")}`,
     description: t("landing.metaDescription"),
@@ -143,7 +144,7 @@ export default function LandingPage() {
 
       {/* ---------------- Capability pills ---------------- */}
       <section
-        aria-label="Highlights"
+        aria-label={t("common.a11y.highlights")}
         className="mx-auto max-w-6xl px-4 sm:px-6"
       >
         <ul className="flex flex-wrap items-center justify-center gap-3">

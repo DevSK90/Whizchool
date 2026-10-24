@@ -80,5 +80,19 @@
   "unsaved": "You have unsaved changes",
   "copied": "Copied to clipboard",
   "copyLink": "Copy link",
-  "characters": "{count} / {max} characters"
+  "characters": "{count} / {max} characters",
+  "studentCount": "{count, plural, one {# student} other {# students}}",
+  "a11y": {
+    "home": "{app} home",
+    "mainNav": "Main",
+    "mobileNav": "Mobile",
+    "portalNav": "Portal",
+    "highlights": "Highlights",
+    "selectAll": "Select all",
+    "pickDate": "Pick a date",
+    "clearDate": "Clear date",
+    "month": "{label} – month",
+    "year": "{label} – year",
+    "time": "Time"
+  }
 }

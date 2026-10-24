@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { AlertTriangle, CheckCircle2, Download, FileUp, Sparkles, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PageHeader } from "@/components/shared/page-header";
-import { api, errorMessage } from "@/lib/api/client";
+import { api, errorMessage, newIdempotencyKey } from "@/lib/api/client";
 import { useApiMutation } from "@/lib/api/hooks";
 import type { ImportPreview, ImportRow } from "@/lib/api/types";
 import { downloadText, parseCsv, toCsv } from "@/lib/csv";
@@ -34,10 +34,21 @@ export default function ImportPage() {
   const [onlyErrors, setOnlyErrors] = useState(false);
   const [invite, setInvite] = useState(true);
   const [fileError, setFileError] = useState<string | null>(null);
+  const idemKey = useRef<string | null>(null);
 
-  const check = useApiMutation((data: ImportRow[]) => api.post<ImportPreview>("/imports/students/preview", { rows: data }), { onSuccess: setPreview });
+  const check = useApiMutation((data: ImportRow[]) => api.post<ImportPreview>("/imports/students/preview", { rows: data }), {
+    onSuccess: (p) => {
+      idemKey.current = null;
+      setPreview(p);
+    },
+  });
   const commit = useApiMutation(
-    () => api.post<{ created: number; skipped: number; invited: number }>("/imports/students/commit", { rows: preview!.rows.filter((r) => !r.errors.length).map((r) => r.data), inviteParents: invite }),
+    () =>
+      api.post<{ created: number; skipped: number; invited: number }>(
+        "/imports/students/commit",
+        { rows: preview!.rows.filter((r) => !r.errors.length).map((r) => r.data), inviteParents: invite },
+        { idempotencyKey: (idemKey.current ??= newIdempotencyKey()) },
+      ),
     {
       invalidate: [["students"], ["classes"], ["dashboard"]],
       success: (r) => t("done", r),

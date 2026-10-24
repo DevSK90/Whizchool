@@ -214,6 +214,7 @@ export interface Student {
   guardianIds: ID[];
   electiveSubjectIds: ID[];
   discountIds: ID[];
+  photoFileId?: ID;
 }
 
 export interface StudentListItem {
@@ -241,6 +242,27 @@ export interface StudentDetail extends Student {
   attendanceRate: number;
   balance: number;
   history: { yearName: string; className: string }[];
+  photoUrl?: string;
+  documents: StudentDocument[];
+}
+
+export type DocumentKind = "birth_certificate" | "photo" | "report" | "medical" | "other";
+
+/** A stored file. `url` is a short-lived signed URL from the API (may be absent in demo mode). */
+export interface FileRef {
+  id: ID;
+  name: string;
+  size: number;
+  mimeType: string;
+  url?: string;
+}
+
+export interface StudentDocument {
+  id: ID;
+  kind: DocumentKind;
+  file: FileRef;
+  uploadedAt: DateTimeString;
+  uploadedBy: string;
 }
 
 // ---------- Admissions ----------
@@ -273,7 +295,7 @@ export interface ApplicationInput {
     nic?: string;
     occupation?: string;
   };
-  documents: { name: string; size: number; kind: "birth_certificate" | "report" | "photo" | "other" }[];
+  documents: { name: string; size: number; kind: "birth_certificate" | "report" | "photo" | "other"; fileId?: ID }[];
 }
 
 export interface Application extends ApplicationInput {
@@ -680,6 +702,7 @@ export interface StaffDashboard {
 export interface PortalChild {
   id: ID;
   fullName: string;
+  photoUrl?: string;
   admissionNo: string;
   className: string;
   attendanceRate: number;

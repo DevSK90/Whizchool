@@ -5,6 +5,7 @@ import {
   className,
   currentClasses,
   fail,
+  fileRef,
   fullName,
   hasFullScope,
   lastSchoolDay,
@@ -111,6 +112,7 @@ export const dashboardRoutes: Route[] = [
           return {
             id,
             fullName: fullName(st),
+            photoUrl: fileRef(db, st.photoFileId)?.url,
             admissionNo: st.admissionNo,
             className: className(db, st.classId),
             attendanceRate: studentAttendance(db, id, today).rate,

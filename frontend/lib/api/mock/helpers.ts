@@ -153,6 +153,11 @@ export function toInvoiceListItem(db: DB, inv: Invoice, today: string): InvoiceL
   };
 }
 
+export function fileRef(db: DB, fileId: string | undefined) {
+  const f = db.files.get(fileId);
+  return f ? { id: f.id, name: f.name, size: f.size, mimeType: f.mimeType, url: f.dataUrl } : undefined;
+}
+
 export function paginate<T>(rows: T[], query: Record<string, string>): Paginated<T> {
   const page = Math.max(1, Number(query.page) || 1);
   const pageSize = Math.min(100, Math.max(5, Number(query.pageSize) || 20));

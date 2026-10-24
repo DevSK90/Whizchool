@@ -68,6 +68,26 @@ export interface Enrollment {
   classId: string;
 }
 
+export interface MockFile {
+  id: string;
+  name: string;
+  size: number;
+  mimeType: string;
+  purpose: string;
+  /** Downscaled image preview (data URL); PDFs keep metadata only in the demo. */
+  dataUrl?: string;
+  uploadedAt: string;
+}
+
+export interface MockStudentDocument {
+  id: string;
+  studentId: string;
+  fileId: string;
+  kind: "birth_certificate" | "photo" | "report" | "medical" | "other";
+  uploadedAt: string;
+  uploadedBy: string;
+}
+
 export interface PayHereOrder {
   id: string;
   studentId: string;
@@ -116,6 +136,8 @@ export interface DB {
   messages: Table<MessageLog>;
   notices: Table<Notice>;
   audit: Table<AuditEntry>;
+  files: Table<MockFile>;
+  studentDocuments: Table<MockStudentDocument>;
   counters: Record<string, number>;
   promotionSummary?: { at: string; promoted: number; repeated: number; left: number; graduated: number };
 }

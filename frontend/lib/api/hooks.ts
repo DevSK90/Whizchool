@@ -148,6 +148,12 @@ export const useReportCardClass = (examId: string, classId: string) =>
     queryFn: () => api.get<T.ReportCardClassView>("/report-cards", { examId, classId }),
     enabled: !!examId && !!classId,
   });
+export const useReportCardBatch = (examId: string, classId: string) =>
+  useQuery({
+    queryKey: ["reportCards", "batch", examId, classId],
+    queryFn: () => api.get<T.ReportCard[]>("/report-cards/batch", { examId, classId }),
+    enabled: !!examId && !!classId,
+  });
 export const useReportCard = (examId: string, studentId: string) =>
   useQuery({
     queryKey: ["reportCard", examId, studentId],

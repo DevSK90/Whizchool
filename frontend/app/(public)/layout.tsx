@@ -9,7 +9,7 @@ export default function PublicLayout({ children }: LayoutProps<"/">) {
     <div className="flex min-h-svh flex-col">
       <header className="sticky top-0 z-20 border-b bg-background/85 backdrop-blur">
         <div className="mx-auto flex h-14 max-w-6xl items-center gap-2 px-4">
-          <Link href="/" aria-label="Whizchool home">
+          <Link href="/" aria-label={t("common.a11y.home", { app: t("common.appName") })}>
             <Logo />
           </Link>
           <div className="flex-1" />

@@ -164,7 +164,7 @@
       "marksPending": "Some mark sheets are not submitted yet. Report cards can be approved once all marks are in.",
       "view": "View",
       "remarkPlaceholder": "e.g. Excellent effort this term. Keep it up!",
-      "printAll": "Print"
+      "printAll": "Print all report cards"
     },
     "card": {
       "title": "Report card",
@@ -186,10 +186,16 @@
       "principalRemark": "Principal's remarks",
       "classTeacher": "Class teacher",
       "principal": "Principal",
-      "gradeKey": "Grading: A 75–100 · B 65–74 · C 50–64 · S 35–49 · W 0–34 · AB absent",
+      "gradeKey": "Grading: {bands} · AB absent",
       "draftWatermark": "Draft — not released",
       "print": "Print / save PDF",
       "back": "Back"
+    },
+    "batch": {
+      "title": "{className} · {exam}",
+      "description": "{count} report cards, one per page. Use your browser's print dialog to print or save as PDF.",
+      "print": "Print all",
+      "back": "Back to class"
     }
   },
   "promotions": {

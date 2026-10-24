@@ -1,12 +1,12 @@
 "use client";
 
-import { use, useState } from "react";
+import { use, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { CreditCard, Info } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
@@ -16,7 +16,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { CardsSkeleton, EmptyState, ErrorState, PageSkeleton } from "@/components/shared/states";
 import { StudentAttendanceView } from "@/components/students/attendance-view";
 import { StudentResultsView } from "@/components/students/results-view";
-import { api } from "@/lib/api/client";
+import { api, newIdempotencyKey } from "@/lib/api/client";
 import { useApiMutation, useStudent, useStudentInvoices, useStudentPayments } from "@/lib/api/hooks";
 import type { PayHereCheckout } from "@/lib/api/types";
 import { formatDate, formatMoney, initials } from "@/lib/format";
@@ -38,6 +38,7 @@ export default function ChildPage({ params }: PageProps<"/portal/children/[id]">
         title={
           <span className="flex items-center gap-3">
             <Avatar className="size-10">
+              {s.photoUrl && <AvatarImage src={s.photoUrl} alt="" className="object-cover" />}
               <AvatarFallback className="bg-primary/10 text-primary">{initials(s.fullName)}</AvatarFallback>
             </Avatar>
             {s.fullName}
@@ -70,10 +71,17 @@ function ChildFees({ studentId }: { studentId: string }) {
   const payments = useStudentPayments(studentId);
   const open = invoices.data?.filter((i) => i.balance > 0) ?? [];
   const [selected, setSelected] = useState<string[] | null>(null);
+  const idem = useRef<{ selection: string; key: string } | null>(null);
   const chosen = selected ?? open.map((i) => i.id);
   const amount = open.filter((i) => chosen.includes(i.id)).reduce((a, i) => a + i.balance, 0);
   const balance = open.reduce((a, i) => a + i.balance, 0);
-  const checkout = useApiMutation(() => api.post<PayHereCheckout>("/payhere/checkout", { invoiceIds: chosen }), {
+  const checkout = useApiMutation(
+    () => {
+      const selection = [...chosen].sort().join(",");
+      if (idem.current?.selection !== selection) idem.current = { selection, key: newIdempotencyKey() };
+      return api.post<PayHereCheckout>("/payhere/checkout", { invoiceIds: chosen }, { idempotencyKey: idem.current.key });
+    },
+    {
     onSuccess: (c) => startPayHereCheckout(c, (u) => router.push(u)),
   });
 

@@ -64,7 +64,8 @@
       "guardians": "Guardians",
       "attendance": "Attendance",
       "results": "Results",
-      "fees": "Fees"
+      "fees": "Fees",
+      "documents": "Documents"
     },
     "personal": "Personal details",
     "subjects": "Subjects",
@@ -131,5 +132,54 @@
     "invoices": "Invoices",
     "payments": "Payments",
     "noInvoices": "No invoices."
+  },
+  "photo": {
+    "change": "Change photo",
+    "upload": "Add photo",
+    "remove": "Remove photo",
+    "updated": "Photo updated.",
+    "removed": "Photo removed.",
+    "badType": "Use a JPG, PNG or WebP image.",
+    "tooLarge": "Images must be 5 MB or smaller."
+  },
+  "documents": {
+    "title": "Documents",
+    "description": "Certificates, reports and medical letters for this student.",
+    "upload": "Upload document",
+    "kind": "Document type",
+    "file": "File",
+    "chooseFile": "Choose file",
+    "formats": "PDF, JPG, PNG or WebP · max 5 MB",
+    "uploaded": "Document uploaded.",
+    "removed": "Document removed.",
+    "empty": "No documents yet.",
+    "emptyHint": "Documents from the online application appear here after enrollment.",
+    "view": "View",
+    "remove": "Remove",
+    "removeTitle": "Remove this document?",
+    "noPreview": "Preview isn't available in demo mode.",
+    "by": "Uploaded {date} by {name}",
+    "badType": "Use a PDF, JPG, PNG or WebP file.",
+    "tooLarge": "Files must be 5 MB or smaller.",
+    "kinds": {
+      "birth_certificate": "Birth certificate",
+      "photo": "Photograph",
+      "report": "School report",
+      "medical": "Medical document",
+      "other": "Other"
+    }
+  },
+  "guardians": {
+    "add": "Add guardian",
+    "addTitle": "Add a guardian",
+    "addDescription": "If a guardian with the same email or phone already exists (for example a sibling's parent), they are linked instead of duplicated.",
+    "added": "Guardian added.",
+    "linked": "Existing guardian {name} linked.",
+    "remove": "Remove",
+    "removeTitle": "Remove {name} as a guardian?",
+    "removeBody": "Their own record and any other children they're linked to are not affected.",
+    "removed": "Guardian removed.",
+    "invite": "Email a parent-portal invitation",
+    "inviteLink": "Invitation link (demo): {link}"
   }
 }

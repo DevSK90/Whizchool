@@ -39,10 +39,11 @@ export function PortalShellSkeleton() {
 
 function PortalHeaderNav() {
   const t = useTranslations("nav.portal");
+  const tc = useTranslations("common");
   const pathname = usePathname();
   return (
     <>
-      <nav className="hidden items-center gap-1 md:flex" aria-label="Portal">
+      <nav className="hidden items-center gap-1 md:flex" aria-label={tc("a11y.portalNav")}>
         {TABS.map((tab) => (
           <Link
             key={tab.href}
@@ -63,12 +64,13 @@ function PortalHeaderNav() {
 /** Mobile bottom tab bar — must live outside the blurred header (backdrop-filter creates a containing block for fixed elements). */
 function PortalTabBar() {
   const t = useTranslations("nav.portal");
+  const tc = useTranslations("common");
   const pathname = usePathname();
   return (
     <>
       <nav
         className="no-print fixed inset-x-0 bottom-0 z-30 grid grid-cols-3 border-t bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
-        aria-label="Portal"
+        aria-label={tc("a11y.portalNav")}
       >
         {TABS.map((tab) => {
           const active = isActive(pathname, tab.href);

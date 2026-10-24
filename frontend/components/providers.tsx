@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { NextIntlClientProvider } from "next-intl";
 import { ThemeProvider } from "next-themes";
 import { ApiError } from "@/lib/api/client";
@@ -13,7 +13,20 @@ import { defaultLocale, timeZone } from "@/i18n/config";
 let browserQueryClient: QueryClient | undefined;
 
 function makeQueryClient() {
-  return new QueryClient({
+  // Any 401 means the session ended (expired, signed out elsewhere, or account deactivated).
+  // Re-check the session; AreaGate then redirects to sign-in with the "session expired" notice.
+  const onError = (error: unknown) => {
+    if (error instanceof ApiError && error.status === 401) {
+      client.invalidateQueries({ queryKey: ["auth", "me"], refetchType: "active" });
+    }
+  };
+  const client: QueryClient = new QueryClient({
+    queryCache: new QueryCache({
+      onError: (error, query) => {
+        if (query.queryKey[0] !== "auth") onError(error);
+      },
+    }),
+    mutationCache: new MutationCache({ onError }),
     defaultOptions: {
       queries: {
         staleTime: 30_000,
@@ -23,6 +36,7 @@ function makeQueryClient() {
       },
     },
   });
+  return client;
 }
 
 function getQueryClient() {

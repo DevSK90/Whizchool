@@ -5,6 +5,7 @@
 import { useState } from "react";
 import { endOfYear, format, isValid, parseISO, startOfYear } from "date-fns";
 import { CalendarIcon, ChevronDown, Clock, X } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -64,7 +65,7 @@ export function DatePicker({
   id,
   value,
   onChange,
-  placeholder = "Pick a date",
+  placeholder,
   className,
   invalid,
   disabled,
@@ -82,6 +83,7 @@ export function DatePicker({
   clearable?: boolean;
   align?: "start" | "center" | "end";
 }) {
+  const t = useTranslations("common.a11y");
   const [open, setOpen] = useState(false);
   const date = parseDate(value);
   const showClear = clearable && !!date && !disabled;
@@ -99,7 +101,7 @@ export function DatePicker({
             className={cn("w-full justify-start gap-2 px-2.5 font-normal data-[empty=true]:text-muted-foreground", showClear && "pr-8")}
           >
             <CalendarIcon className="text-muted-foreground" />
-            <span className="flex-1 truncate text-left">{date ? format(date, "d MMM yyyy") : placeholder}</span>
+            <span className="flex-1 truncate text-left">{date ? format(date, "d MMM yyyy") : (placeholder ?? t("pickDate"))}</span>
             {!showClear && <ChevronDown className="text-muted-foreground" />}
           </Button>
         </PopoverTrigger>
@@ -117,7 +119,7 @@ export function DatePicker({
       {showClear && (
         <button
           type="button"
-          aria-label="Clear date"
+          aria-label={t("clearDate")}
           onClick={() => onChange("")}
           className="absolute top-1/2 right-1.5 -translate-y-1/2 rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
         >
@@ -147,6 +149,7 @@ export function MonthPicker({
   className?: string;
   ariaLabel: string;
 }) {
+  const t = useTranslations("common.a11y");
   const [y, m] = value ? value.split("-") : ["", ""];
   const years = Array.from({ length: toYear - fromYear + 1 }, (_, i) => String(toYear - i));
   const NONE = "__none";
@@ -157,7 +160,7 @@ export function MonthPicker({
         value={m || NONE}
         onValueChange={(v) => (v === NONE ? onChange("") : set(y || String(new Date().getFullYear()), v))}
       >
-        <SelectTrigger className="w-full min-w-32" aria-label={`${ariaLabel} – month`}>
+        <SelectTrigger className="w-full min-w-32" aria-label={t("month", { label: ariaLabel })}>
           <CalendarIcon className="text-muted-foreground" />
           <SelectValue />
         </SelectTrigger>
@@ -171,7 +174,7 @@ export function MonthPicker({
         </SelectContent>
       </Select>
       <Select value={y || undefined} onValueChange={(v) => set(v, m || "01")} disabled={!m && !!allLabel}>
-        <SelectTrigger className="w-28" aria-label={`${ariaLabel} – year`}>
+        <SelectTrigger className="w-28" aria-label={t("year", { label: ariaLabel })}>
           <SelectValue placeholder="—" />
         </SelectTrigger>
         <SelectContent>
@@ -194,7 +197,7 @@ export function TimeSelect({
   from = 7,
   to = 17,
   stepMinutes = 30,
-  placeholder = "Time",
+  placeholder,
   invalid,
   className,
 }: {
@@ -208,6 +211,7 @@ export function TimeSelect({
   invalid?: boolean;
   className?: string;
 }) {
+  const t = useTranslations("common.a11y");
   const slots: string[] = [];
   for (let mins = from * 60; mins <= to * 60; mins += stepMinutes) {
     slots.push(`${String(Math.floor(mins / 60)).padStart(2, "0")}:${String(mins % 60).padStart(2, "0")}`);
@@ -216,7 +220,7 @@ export function TimeSelect({
     <Select value={value || undefined} onValueChange={onChange}>
       <SelectTrigger id={id} aria-invalid={invalid} className={cn("w-full", className)}>
         <Clock className="text-muted-foreground" />
-        <SelectValue placeholder={placeholder} />
+        <SelectValue placeholder={placeholder ?? t("time")} />
       </SelectTrigger>
       <SelectContent className="max-h-64">
         {slots.map((s) => (

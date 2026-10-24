@@ -48,6 +48,7 @@ export default function PromotionsPage() {
 function PromotionEditor({ data }: { data: PromotionPreview }) {
   const t = useTranslations("academics.promotions");
   const ta = useTranslations("status.promotion");
+  const tc = useTranslations("common");
   const can = useCan();
   const [rows, setRows] = useState<PromotionRow[]>(data.rows);
   const [classId, setClassIdState] = useState(data.rows[0]?.fromClassId ?? "");
@@ -134,7 +135,7 @@ function PromotionEditor({ data }: { data: PromotionPreview }) {
             <TableRow className="bg-muted/40 hover:bg-muted/40">
               <TableHead className="w-10">
                 <Checkbox
-                  aria-label="Select all"
+                  aria-label={tc("a11y.selectAll")}
                   checked={visible.length > 0 && selected.length === visible.length}
                   onCheckedChange={(c) => setSelected(c ? visible.map((r) => r.studentId) : [])}
                 />

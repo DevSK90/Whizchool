@@ -9,6 +9,8 @@ export interface RequestOptions {
   query?: QueryParams;
   body?: unknown;
   signal?: AbortSignal;
+  /** Sent as Idempotency-Key so a retried request (double click, flaky network) is applied only once. */
+  idempotencyKey?: string;
 }
 
 export class ApiError extends Error {
@@ -40,11 +42,25 @@ async function httpRequest<T>(method: HttpMethod, path: string, opts: RequestOpt
   const res = await fetch(`${API_BASE}${path}${buildQuery(opts.query)}`, {
     method,
     credentials: "include",
-    headers: opts.body !== undefined ? { "Content-Type": "application/json" } : undefined,
+    headers: {
+      ...(opts.body !== undefined ? { "Content-Type": "application/json" } : {}),
+      ...(opts.idempotencyKey ? { "Idempotency-Key": opts.idempotencyKey } : {}),
+    },
     body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
     signal: opts.signal,
   });
   if (res.status === 204) return undefined as T;
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    const err = data?.error;
+    throw new ApiError(res.status, err?.code ?? "unknown", err?.message ?? res.statusText, err?.fields);
+  }
+  return data as T;
+}
+
+/** Multipart upload (real API only); the browser sets the multipart boundary header. */
+async function httpUpload<T>(path: string, form: FormData): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, { method: "POST", credentials: "include", body: form });
   const data = await res.json().catch(() => null);
   if (!res.ok) {
     const err = data?.error;
@@ -62,11 +78,17 @@ async function request<T>(method: HttpMethod, path: string, opts: RequestOptions
 export const api = {
   get: <T>(path: string, query?: QueryParams, signal?: AbortSignal) =>
     request<T>("GET", path, { query, signal }),
-  post: <T>(path: string, body?: unknown) => request<T>("POST", path, { body }),
+  post: <T>(path: string, body?: unknown, opts?: { idempotencyKey?: string }) => request<T>("POST", path, { body, ...opts }),
   put: <T>(path: string, body?: unknown) => request<T>("PUT", path, { body }),
   patch: <T>(path: string, body?: unknown) => request<T>("PATCH", path, { body }),
   delete: <T>(path: string) => request<T>("DELETE", path),
+  upload: <T>(path: string, form: FormData) => httpUpload<T>(path, form),
 };
+
+/** A fresh key per user action; reuse it when retrying the same action. */
+export function newIdempotencyKey() {
+  return typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
 
 export function errorMessage(error: unknown) {
   if (error instanceof ApiError) return error.message;

@@ -259,6 +259,8 @@ export function createSeed(): DB {
     messages: new Table(),
     notices: new Table(),
     audit: new Table(),
+    files: new Table(),
+    studentDocuments: new Table(),
     counters: {},
   };
 

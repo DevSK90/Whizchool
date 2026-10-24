@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
-import { api, ApiError, errorMessage } from "@/lib/api/client";
+import { api, ApiError, errorMessage, newIdempotencyKey } from "@/lib/api/client";
 import { useDebouncedValue } from "@/hooks/use-debounce";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Paginated, PaymentListItem, PaymentMethod, StudentListItem } from "@/lib/api/types";
@@ -35,9 +35,11 @@ export function RecordPaymentDialog({ trigger, student }: { trigger: ReactNode; 
   const [date, setDate] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  const idemKey = useRef<string | null>(null);
   const [done, setDone] = useState<PaymentListItem | null>(null);
 
   function reset() {
+    idemKey.current = null;
     setPicked(student);
     setAmount("");
     setMethod("cash");
@@ -57,7 +59,12 @@ export function RecordPaymentDialog({ trigger, student }: { trigger: ReactNode; 
     if (Object.keys(errs).length) return;
     setBusy(true);
     try {
-      const p = await api.post<PaymentListItem>("/payments", { studentId: picked!.id, amount: Number(amount), method, reference, paidAt: date });
+      idemKey.current ??= newIdempotencyKey();
+      const p = await api.post<PaymentListItem>(
+        "/payments",
+        { studentId: picked!.id, amount: Number(amount), method, reference, paidAt: date },
+        { idempotencyKey: idemKey.current },
+      );
       setDone(p);
       for (const key of [["payments"], ["invoices"], ["invoice"], ["student", picked!.id], ["students"], ["fees"], ["defaulters"], ["dashboard"]]) {
         qc.invalidateQueries({ queryKey: key });

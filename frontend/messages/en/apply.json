@@ -36,19 +36,20 @@
   },
   "documents": {
     "title": "Upload documents",
-    "hint": "PDF, JPG or PNG, up to 5 MB each.",
+    "hint": "PDF, JPG, PNG or WebP, up to 5 MB each.",
     "birth_certificate": "Birth certificate",
     "photo": "Recent photograph",
     "report": "Latest school report",
     "choose": "Choose file",
     "replace": "Replace",
     "tooLarge": "{name} is larger than 5 MB.",
-    "badType": "{name} isn't a PDF, JPG or PNG.",
+    "badType": "{name} isn't a PDF, JPG, PNG or WebP file.",
     "birthRequired": "The birth certificate is required.",
     "upload": "Click to upload",
-    "formats": "PDF, JPG or PNG · max 5 MB",
+    "formats": "PDF, JPG, PNG or WebP · max 5 MB",
     "required": "Required",
-    "optional": "Optional"
+    "optional": "Optional",
+    "uploading": "Uploading…"
   },
   "review": {
     "title": "Check your details",

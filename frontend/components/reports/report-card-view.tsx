@@ -4,21 +4,27 @@ import { useTranslations } from "next-intl";
 import { Printer } from "lucide-react";
 import { LogoMark } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
+import { useGradeBands } from "@/lib/api/hooks";
 import type { ReportCard } from "@/lib/api/types";
+import { DEFAULT_GRADE_BANDS } from "@/lib/grading";
 import { cn } from "@/lib/utils";
 
 /** Printable term report card (A4 portrait). Used by staff and in the parent portal. */
-export function ReportCardView({ card }: { card: ReportCard }) {
+export function ReportCardView({ card, showPrintButton = true }: { card: ReportCard; showPrintButton?: boolean }) {
   const t = useTranslations("academics.reportCards.card");
   const year = card.exam.startDate.slice(0, 4);
   const draft = card.status !== "released";
+  const bands = useGradeBands().data ?? DEFAULT_GRADE_BANDS;
+  const gradeKey = [...bands].sort((a, b) => b.min - a.min).map((b) => `${b.grade} ${b.min}–${b.max}`).join(" · ");
   return (
     <div className="space-y-4">
-      <div className="no-print flex justify-end">
-        <Button variant="outline" onClick={() => window.print()}>
-          <Printer /> {t("print")}
-        </Button>
-      </div>
+      {showPrintButton && (
+        <div className="no-print flex justify-end">
+          <Button variant="outline" onClick={() => window.print()}>
+            <Printer /> {t("print")}
+          </Button>
+        </div>
+      )}
       <article className="relative mx-auto max-w-[210mm] overflow-hidden rounded-xl border bg-white p-6 text-zinc-900 shadow-sm print:max-w-none print:rounded-none print:border-0 print:p-0 print:shadow-none sm:p-10">
         {draft && (
           <div aria-hidden className="pointer-events-none absolute inset-0 flex items-center justify-center">
@@ -89,7 +95,7 @@ export function ReportCardView({ card }: { card: ReportCard }) {
           <Signature label={t("classTeacher")} name={card.classTeacherName} />
           <Signature label={t("principal")} name={card.school.principalName} />
         </footer>
-        <p className="mt-8 text-center text-[11px] text-zinc-500">{t("gradeKey")}</p>
+        <p className="mt-8 text-center text-[11px] text-zinc-500">{t("gradeKey", { bands: gradeKey })}</p>
       </article>
     </div>
   );

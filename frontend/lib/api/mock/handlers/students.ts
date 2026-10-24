@@ -27,6 +27,7 @@ import {
   todayISO,
   toInvoiceListItem,
   toStudentListItem,
+  fileRef,
   type Ctx,
 } from "../helpers";
 import { nextId, nextNumber, type DB } from "../db";
@@ -234,6 +235,11 @@ export const studentRoutes: Route[] = [
           .filter((e) => e.studentId === s.id)
           .map((e) => ({ yearName: db.years.get(e.yearId)?.name ?? e.yearId.slice(5), className: className(db, e.classId) }))
           .sort((a, b) => b.yearName.localeCompare(a.yearName)),
+        photoUrl: fileRef(db, s.photoFileId)?.url,
+        documents: db.studentDocuments.rows
+          .filter((d) => d.studentId === s.id)
+          .sort((a, b) => b.uploadedAt.localeCompare(a.uploadedAt))
+          .map((d) => ({ id: d.id, kind: d.kind, uploadedAt: d.uploadedAt, uploadedBy: d.uploadedBy, file: fileRef(db, d.fileId)! })),
       };
     },
   },

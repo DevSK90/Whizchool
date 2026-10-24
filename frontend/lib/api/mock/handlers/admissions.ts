@@ -156,6 +156,12 @@ export const admissionRoutes: Route[] = [
       });
       a.stage = "enrolled";
       a.enrolledStudentId = student.id;
+      for (const d of a.documents) {
+        if (!d.fileId || !db.files.get(d.fileId)) continue;
+        db.studentDocuments.insert({
+          id: nextId(db, "sdoc"), studentId: student.id, fileId: d.fileId, kind: d.kind, uploadedAt: a.submittedAt, uploadedBy: a.guardian.name,
+        });
+      }
       a.timeline.push({ stage: "enrolled", at: isoNow(ctx), by: ctx.session!.name, note: `Enrolled in ${cls!.name} (admission no. ${student.admissionNo})` });
       return { studentId: student.id, admissionNo: student.admissionNo, inviteLink };
     },

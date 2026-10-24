@@ -3,12 +3,13 @@ import Link from "next/link";
 import { Logo } from "@/components/brand/logo";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { Skeleton } from "@/components/ui/skeleton";
+import { serverT as t } from "@/i18n/server";
 
 export default function AuthLayout({ children }: LayoutProps<"/">) {
   return (
     <div className="flex min-h-svh flex-col bg-[radial-gradient(70%_50%_at_50%_0%,color-mix(in_oklch,var(--primary)_10%,transparent),transparent)]">
       <header className="mx-auto flex h-14 w-full max-w-5xl items-center justify-between px-4">
-        <Link href="/" aria-label="Whizchool home">
+        <Link href="/" aria-label={t("common.a11y.home", { app: t("common.appName") })}>
           <Logo />
         </Link>
         <ThemeToggle />

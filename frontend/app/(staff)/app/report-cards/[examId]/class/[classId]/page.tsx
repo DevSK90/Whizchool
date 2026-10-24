@@ -3,7 +3,7 @@
 import { use, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { CheckCircle2, MessageSquarePlus, Pencil, Send, Undo2, Info } from "lucide-react";
+import { CheckCircle2, MessageSquarePlus, Pencil, Printer, Send, Undo2, Info } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -54,48 +54,55 @@ export default function ClassReportCardsPage({ params }: PageProps<"/app/report-
           </span>
         }
         actions={
-          can("reportCards.approve") && (
-            <>
-              {data.status === "draft" && (
-                <ConfirmDialog
-                  trigger={
-                    <Button>
-                      <CheckCircle2 /> {t("approve")}
-                    </Button>
-                  }
-                  title={t("approveTitle", { className: data.className })}
-                  description={missing ? t("approveMissing", { count: missing }) : t("approveBody")}
-                  confirmLabel={t("approve")}
-                  onConfirm={() => approve.mutateAsync(missing > 0)}
-                />
-              )}
-              {data.status === "approved" && (
-                <>
-                  <ConfirmDialog
-                    trigger={
-                      <Button variant="outline">
-                        <Undo2 /> {t("revert")}
-                      </Button>
-                    }
-                    title={t("revert")}
-                    confirmLabel={t("revert")}
-                    onConfirm={() => revert.mutateAsync(undefined)}
-                  />
+          <>
+            <Button variant="outline" asChild>
+              <Link href={`/app/report-cards/${examId}/class/${classId}/print`}>
+                <Printer /> {t("printAll")}
+              </Link>
+            </Button>
+            {can("reportCards.approve") && (
+              <>
+                {data.status === "draft" && (
                   <ConfirmDialog
                     trigger={
                       <Button>
-                        <Send /> {t("release")}
+                        <CheckCircle2 /> {t("approve")}
                       </Button>
                     }
-                    title={t("releaseTitle")}
-                    description={t("releaseBody", { count: data.rows.length })}
-                    confirmLabel={t("release")}
-                    onConfirm={() => release.mutateAsync(undefined)}
+                    title={t("approveTitle", { className: data.className })}
+                    description={missing ? t("approveMissing", { count: missing }) : t("approveBody")}
+                    confirmLabel={t("approve")}
+                    onConfirm={() => approve.mutateAsync(missing > 0)}
                   />
-                </>
-              )}
-            </>
-          )
+                )}
+                {data.status === "approved" && (
+                  <>
+                    <ConfirmDialog
+                      trigger={
+                        <Button variant="outline">
+                          <Undo2 /> {t("revert")}
+                        </Button>
+                      }
+                      title={t("revert")}
+                      confirmLabel={t("revert")}
+                      onConfirm={() => revert.mutateAsync(undefined)}
+                    />
+                    <ConfirmDialog
+                      trigger={
+                        <Button>
+                          <Send /> {t("release")}
+                        </Button>
+                      }
+                      title={t("releaseTitle")}
+                      description={t("releaseBody", { count: data.rows.length })}
+                      confirmLabel={t("release")}
+                      onConfirm={() => release.mutateAsync(undefined)}
+                    />
+                  </>
+                )}
+              </>
+            )}
+          </>
         }
       />
       {!data.marksComplete && (

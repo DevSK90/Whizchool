@@ -15,6 +15,7 @@ import { feeRoutes } from "./handlers/fees";
 import { commsRoutes } from "./handlers/comms";
 import { adminRoutes } from "./handlers/admin";
 import { dashboardRoutes } from "./handlers/dashboard";
+import { fileRoutes } from "./handlers/files";
 
 const routes = compile([
   ...authRoutes,
@@ -27,6 +28,7 @@ const routes = compile([
   ...commsRoutes,
   ...adminRoutes,
   ...dashboardRoutes,
+  ...fileRoutes,
 ]);
 
 const JOURNAL_KEY = "wz_mock_journal_v1";
@@ -43,6 +45,8 @@ interface JournalEntry {
 }
 
 let db: DB | null = null;
+/** Results of requests already applied, by Idempotency-Key (mirrors the API's behaviour). */
+const idempotent = new Map<string, unknown>();
 
 function storage() {
   try {
@@ -119,7 +123,8 @@ function getDb() {
   return db;
 }
 
-const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
+// Simulated network latency so loading states show; skipped under unit tests.
+const delay = (ms: number) => (process.env.NODE_ENV === "test" ? Promise.resolve() : new Promise((r) => setTimeout(r, ms)));
 
 export async function mockRequest<T>(method: HttpMethod, path: string, opts: RequestOptions): Promise<T> {
   await delay(method === "GET" ? 120 + Math.random() * 250 : 250 + Math.random() * 350);
@@ -128,7 +133,11 @@ export async function mockRequest<T>(method: HttpMethod, path: string, opts: Req
   for (const [k, v] of Object.entries(opts.query ?? {})) if (v !== undefined && v !== null && v !== "") query[k] = String(v);
   const now = new Date();
   const userId = sessionUserId();
+  if (opts.idempotencyKey && idempotent.has(opts.idempotencyKey)) {
+    return structuredClone(idempotent.get(opts.idempotencyKey)) as T;
+  }
   const result = execute(database, method, path, query, opts.body, now, userId);
+  if (opts.idempotencyKey) idempotent.set(opts.idempotencyKey, result);
 
   if (path === "/auth/login" || path.endsWith("/accept")) setSession((result as { id: string }).id);
   if (path === "/auth/logout") setSession(null);

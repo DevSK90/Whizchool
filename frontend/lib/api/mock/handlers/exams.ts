@@ -306,6 +306,20 @@ export const examRoutes: Route[] = [
   },
   {
     method: "GET",
+    path: "/report-cards/batch",
+    handler: (ctx): ReportCard[] => {
+      const { examId, classId } = ctx.query;
+      assertClassTeacherOrFull(ctx, classId, "reportCards.view");
+      const db = ctx.db;
+      getExam(db, examId);
+      const today = todayISO(ctx);
+      return classResults(db, examId, classId)
+        .rows.sort((a, b) => a.student.firstName.localeCompare(b.student.firstName))
+        .map((r) => buildReportCard(db, examId, r.student.id, today));
+    },
+  },
+  {
+    method: "GET",
     path: "/report-cards/:examId/:studentId",
     handler: (ctx) => {
       const s = requireAuth(ctx);

@@ -14,35 +14,29 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { SelectItem } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { FloatingDatePicker, FloatingInput, FloatingSelect, FloatingTextarea, PhoneField, SectionLabel } from "@/components/shared/floating-field";
-import { api } from "@/lib/api/client";
+import { api, errorMessage, newIdempotencyKey } from "@/lib/api/client";
 import { usePublicSchool } from "@/lib/api/hooks";
 import type { ApplicationInput, Grade } from "@/lib/api/types";
 import { applyServerErrors } from "@/lib/forms";
+import { mobileDigits, toInternationalPhone, toLocalPhone } from "@/lib/phone";
 import { formatDate } from "@/lib/format";
+import { checkFile, uploadFile } from "@/lib/uploads";
 import { cn } from "@/lib/utils";
 
-const MAX_FILE = 5 * 1024 * 1024;
-const FILE_TYPES = ["application/pdf", "image/jpeg", "image/png"];
 type DocKind = "birth_certificate" | "photo" | "report";
 const DOC_KINDS: DocKind[] = ["birth_certificate", "photo", "report"];
 const STEPS = ["student", "guardian", "documents", "review", "done"] as const;
-
-/** Accepts "77 123 4567", "077 123 4567" or "+94 77 123 4567"; returns the 9 national digits or null. */
-function mobileDigits(value: string) {
-  let d = value.replace(/\D/g, "");
-  if (d.length === 11 && d.startsWith("94")) d = d.slice(2);
-  if (d.length === 10 && d.startsWith("0")) d = d.slice(1);
-  return /^\d{9}$/.test(d) ? d : null;
-}
-const toLocalPhone = (d: string) => `0${d.slice(0, 2)} ${d.slice(2, 5)} ${d.slice(5)}`;
 
 export function ApplyForm() {
   const t = useTranslations("apply");
   const ts = useTranslations("status");
   const [step, setStep] = useState(0);
-  const [docs, setDocs] = useState<Partial<Record<DocKind, { name: string; size: number }>>>({});
+  const [docs, setDocs] = useState<Partial<Record<DocKind, { name: string; size: number; fileId: string }>>>({});
+  const [uploading, setUploading] = useState<DocKind | null>(null);
   const [docError, setDocError] = useState<string | null>(null);
   const [done, setDone] = useState<{ refNo: string; email: string } | null>(null);
+  // One key per form instance: a retried or double-clicked submit creates the application once.
+  const [idemKey] = useState(newIdempotencyKey);
   const grades = useQuery({ queryKey: ["grades"], queryFn: () => api.get<Grade[]>("/grades"), staleTime: Infinity });
   const school = usePublicSchool();
   const thisYear = new Date().getFullYear();
@@ -99,17 +93,30 @@ export function ApplyForm() {
   }
 
   async function next() {
-    if (!(await form.trigger(STEP_FIELDS[step]))) return;
+    if (!(await form.trigger(STEP_FIELDS[step]))) {
+      // Mark the step's fields touched so errors clear while typing. Otherwise an error only clears
+      // on blur, and the layout shift as it disappears swallows the user's next click on "Next".
+      for (const name of STEP_FIELDS[step]) form.setValue(name, form.getValues(name), { shouldTouch: true });
+      return;
+    }
     if (step === 2 && !docs.birth_certificate) return setDocError(t("documents.birthRequired"));
     go(step + 1);
   }
 
-  function pickFile(kind: DocKind, file: File | undefined) {
+  async function pickFile(kind: DocKind, file: File | undefined) {
     if (!file) return;
-    if (!FILE_TYPES.includes(file.type)) return setDocError(t("documents.badType", { name: file.name }));
-    if (file.size > MAX_FILE) return setDocError(t("documents.tooLarge", { name: file.name }));
+    const problem = checkFile(file, "application-document");
+    if (problem) return setDocError(t(`documents.${problem}`, { name: file.name }));
     setDocError(null);
-    setDocs((d) => ({ ...d, [kind]: { name: file.name, size: file.size } }));
+    setUploading(kind);
+    try {
+      const ref = await uploadFile(file, "application-document");
+      setDocs((d) => ({ ...d, [kind]: { name: file.name, size: file.size, fileId: ref.id } }));
+    } catch (e) {
+      setDocError(errorMessage(e));
+    } finally {
+      setUploading(null);
+    }
   }
 
   const onSubmit = form.handleSubmit(async (v) => {
@@ -120,7 +127,7 @@ export function ApplyForm() {
       documents: DOC_KINDS.filter((k) => docs[k]).map((k) => ({ ...docs[k]!, kind: k })),
     };
     try {
-      setDone(await api.post<{ refNo: string; email: string }>("/applications", body));
+      setDone(await api.post<{ refNo: string; email: string }>("/applications", body, { idempotencyKey: idemKey }));
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (e) {
       if (applyServerErrors(e, form.setError)) go(0);
@@ -334,6 +341,7 @@ export function ApplyForm() {
                     <div className="grid gap-4 sm:grid-cols-3">
                       {DOC_KINDS.map((kind) => {
                         const file = docs[kind];
+                        const busy = uploading === kind;
                         return (
                           <label
                             key={kind}
@@ -346,14 +354,23 @@ export function ApplyForm() {
                               {kind === "birth_certificate" ? t("documents.required") : t("documents.optional")}
                             </span>
                             <span className={cn("flex size-12 items-center justify-center rounded-full", file ? "bg-primary text-primary-foreground" : "bg-primary/10 text-primary")}>
-                              {file ? <FileCheck2 className="size-5" /> : <UploadCloud className="size-5" />}
+                              {busy ? <Spinner className="size-5" /> : file ? <FileCheck2 className="size-5" /> : <UploadCloud className="size-5" />}
                             </span>
                             <span className="mt-4 text-sm font-semibold">{t(`documents.${kind}`)}</span>
                             <span className="mt-1 max-w-full truncate text-xs text-muted-foreground">
-                              {file ? `${file.name} · ${Math.max(1, Math.round(file.size / 1024))} KB` : t("documents.upload")}
+                              {busy ? t("documents.uploading") : file ? `${file.name} · ${Math.max(1, Math.round(file.size / 1024))} KB` : t("documents.upload")}
                             </span>
                             {file && <span className="mt-3 text-xs font-medium text-primary">{t("documents.replace")}</span>}
-                            <input type="file" accept=".pdf,.jpg,.jpeg,.png" className="sr-only" onChange={(e) => pickFile(kind, e.target.files?.[0])} />
+                            <input
+                              type="file"
+                              accept=".pdf,.jpg,.jpeg,.png,.webp"
+                              className="sr-only"
+                              disabled={uploading !== null}
+                              onChange={(e) => {
+                                pickFile(kind, e.target.files?.[0]);
+                                e.target.value = "";
+                              }}
+                            />
                           </label>
                         );
                       })}
@@ -381,7 +398,7 @@ export function ApplyForm() {
                       </ReviewCard>
                       <ReviewCard title={t("steps.guardian")} onEdit={() => go(1)} editLabel={t("review.edit")}>
                         <Row label={t("guardian.name")} value={`${values.guardian.name} (${ts(`relationship.${values.guardian.relationship}`)})`} />
-                        <Row label={t("guardian.phone")} value={mobileDigits(values.guardian.phone ?? "") ? `+94 ${toLocalPhone(mobileDigits(values.guardian.phone)!).slice(1)}` : ""} />
+                        <Row label={t("guardian.phone")} value={mobileDigits(values.guardian.phone ?? "") ? toInternationalPhone(mobileDigits(values.guardian.phone)!) : ""} />
                         <Row label={t("guardian.email")} value={values.guardian.email} />
                         <Row label={t("guardian.nic")} value={values.guardian.nic} />
                       </ReviewCard>
@@ -421,7 +438,7 @@ export function ApplyForm() {
                     <span />
                   )}
                   {step < 3 ? (
-                    <Button type="button" size="lg" className="h-11 rounded-full px-8 text-[15px]" onClick={next}>
+                    <Button type="button" size="lg" className="h-11 rounded-full px-8 text-[15px]" onClick={next} disabled={uploading !== null}>
                       {t("next")} <ArrowRight />
                     </Button>
                   ) : (

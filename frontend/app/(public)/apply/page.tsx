@@ -8,6 +8,7 @@ export const metadata: Metadata = {
   title: t("apply.metaTitle"),
   description: t("apply.subtitle"),
   robots: { index: true, follow: true },
+  alternates: { canonical: "/apply" },
 };
 
 export default function ApplyPage() {
