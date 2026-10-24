@@ -10,7 +10,7 @@
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "next build && playwright test",
+    "test:e2e": "node scripts/e2e.mjs",
     "test:contract:api": "vitest run --mode api"
   },
   "dependencies": {

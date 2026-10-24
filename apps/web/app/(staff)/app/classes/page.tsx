@@ -139,7 +139,7 @@ function CreateClassDialog() {
             </Field>
           </div>
           {isAL && (
-            <Field>
+            <Field data-invalid={!!errors.streamId}>
               <FieldLabel>{t("stream")}</FieldLabel>
               <FilterSelect
                 ariaLabel={t("stream")}
@@ -149,9 +149,10 @@ function CreateClassDialog() {
                 allLabel={tc("none")}
                 className="sm:w-full"
               />
+              <FieldError>{errors.streamId}</FieldError>
             </Field>
           )}
-          <Field>
+          <Field data-invalid={!!errors.classTeacherId}>
             <FieldLabel>{t("classTeacher")}</FieldLabel>
             <FilterSelect
               ariaLabel={t("classTeacher")}
@@ -161,6 +162,7 @@ function CreateClassDialog() {
               allLabel={tc("none")}
               className="sm:w-full"
             />
+            <FieldError>{errors.classTeacherId}</FieldError>
           </Field>
           <Field>
             <FieldLabel htmlFor="room">{t("room")}</FieldLabel>

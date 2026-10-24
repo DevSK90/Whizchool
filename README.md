@@ -41,7 +41,7 @@ Demo accounts (password `demo1234`): `admin@`, `principal@`, `teacher@`, `accoun
 | `npm run typecheck` | TypeScript across all workspaces |
 | `npm run lint` | ESLint |
 | `npm test` | Web unit + contract tests and API tests (needs `npm run db:up`) |
-| `npm run test:e2e -w @whizchool/web` | Playwright E2E, using your installed Chrome |
+| `npm run test:e2e -w @whizchool/web` | Playwright E2E (always against the demo API, whatever `.env.local` says), using your installed Chrome |
 | `npm run db:reset` | Recreate the dev database from migrations, then `npm run db:seed` |
 | `npm run db:migrate` | Create/apply a migration after editing `apps/api/prisma/schema.prisma` |
 

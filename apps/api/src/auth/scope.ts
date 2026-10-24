@@ -30,6 +30,12 @@ export function classWhere(auth: AuthContext, key: PermissionKey): Prisma.ClassS
   return { id: { in: scopedClassIds(auth) } };
 }
 
+/** Whether the caller may open one class under `key`: full scope, or a class they lead or teach in. */
+export function canSeeClass(auth: AuthContext, classId: string, key: PermissionKey) {
+  if (auth.session.kind === "parent") return false;
+  return hasFullScope(auth, key) || scopedClassIds(auth).includes(classId);
+}
+
 /** In-memory check for one student whose class is already known. */
 export function canSeeStudent(auth: AuthContext, student: { id: string; classId: string }, key: PermissionKey = "students.view") {
   if (auth.session.kind === "parent") return auth.session.studentIds.includes(student.id);

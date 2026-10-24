@@ -2,9 +2,11 @@ import { config } from "../config";
 import type { RouteDef } from "../http/route";
 import { auditLogRoutes } from "./audit-log";
 import { authRoutes } from "./auth";
+import { classRoutes } from "./classes";
 import { healthRoutes } from "./health";
 import { publicRoutes } from "./public";
 import { roleRoutes } from "./roles";
+import { schoolRoutes } from "./school";
 import { testSupportRoutes } from "./test-support";
 import { userRoutes } from "./users";
 
@@ -16,5 +18,7 @@ export const routes: RouteDef<any, any>[] = [
   ...userRoutes,
   ...roleRoutes,
   ...auditLogRoutes,
+  ...schoolRoutes,
+  ...classRoutes,
   ...(config.ENABLE_TEST_ROUTES ? testSupportRoutes : []),
 ];

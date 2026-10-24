@@ -116,7 +116,11 @@ function Calendar() {
     terms.data,
     (d) => Object.fromEntries((d ?? []).map((x) => [x.id, { startDate: x.startDate, endDate: x.endDate }])) as Record<string, { startDate: string; endDate: string }>,
   );
-  const save = useApiMutation(() => Promise.all(Object.entries(dates).map(([id, d]) => api.put(`/terms/${id}`, d))), { invalidate: [["terms"]], success: t("saved") });
+  // One request for all terms: they are validated together, so adjacent terms can move at once.
+  const save = useApiMutation(() => api.put("/terms", { terms: Object.entries(dates).map(([id, d]) => ({ id, ...d })) }), {
+    invalidate: [["terms"]],
+    success: t("saved"),
+  });
   if (terms.isPending || years.isPending) return <PageSkeleton />;
   const year = years.data?.find((y) => y.id === school?.currentYearId);
   return (
