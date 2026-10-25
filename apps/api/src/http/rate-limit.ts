@@ -45,4 +45,8 @@ export const limits = {
   ],
   passwordEmail: [{ name: "password-email", windowMs: FIFTEEN_MINUTES, max: 5 }],
   tokenUse: [{ name: "token-use", windowMs: FIFTEEN_MINUTES, max: 20 }],
+  /** The public admission form: uploads, submissions and status lookups by visitors. */
+  publicUpload: [{ name: "public-upload", windowMs: FIFTEEN_MINUTES, max: 20 }],
+  apply: [{ name: "apply", windowMs: FIFTEEN_MINUTES, max: 5 }],
+  statusLookup: [{ name: "status-lookup", windowMs: FIFTEEN_MINUTES, max: 30 }],
 } satisfies Record<string, RateLimitRule[]>;

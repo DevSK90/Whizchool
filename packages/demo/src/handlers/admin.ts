@@ -1,6 +1,8 @@
 import type { Route } from "../router";
-import type { ImportPreview, ImportRow, Role } from "@whizchool/shared/types";
+import type { Guardian, ImportPreview, ImportRow, Role } from "@whizchool/shared/types";
 import { ALL_PERMISSIONS, type DataScope, type PermissionKey } from "@whizchool/shared/permissions";
+import { sameGuardianName } from "@whizchool/shared/people";
+import { checkImportRow, IMPORT_LIMITS } from "@whizchool/shared/student-import";
 import {
   audit,
   currentClasses,
@@ -9,14 +11,14 @@ import {
   paginate,
   requirePerm,
   sortRows,
+  todayISO,
   type Ctx,
 } from "../helpers";
 import { nextId } from "../db";
-import { createStudent, inviteUser } from "./students";
+import { createStudent, findMatchingGuardian, inviteUser, othersWithPhone } from "./students";
 
 const SCOPES: DataScope[] = ["all", "own_class", "own_subjects", "own_children"];
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const PHONE = /^0\d{2}\s?\d{3}\s?\d{4}$/;
 
 function withUserCount(ctx: Ctx, r: Role): Role {
   return { ...r, userCount: ctx.db.users.rows.filter((u) => u.roleIds.includes(r.id) && u.status !== "deactivated").length };
@@ -36,27 +38,50 @@ function activeAdmins(ctx: Ctx) {
   return ctx.db.users.rows.filter((u) => u.status === "active" && u.roleIds.includes("role_admin"));
 }
 
-function validateImportRow(ctx: Ctx, row: ImportRow, seen: Set<string>) {
-  const errors: string[] = [];
-  const warnings: string[] = [];
-  const classes = currentClasses(ctx.db);
-  if (!row.firstName?.trim()) errors.push("First name is missing");
-  if (!row.lastName?.trim()) errors.push("Last name is missing");
-  if (!["M", "F"].includes((row.gender ?? "").trim().toUpperCase())) errors.push("Gender must be M or F");
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(row.dob ?? "")) errors.push("Date of birth must be YYYY-MM-DD");
-  if (!classes.some((c) => c.name === row.className?.trim())) errors.push(`Unknown class “${row.className ?? ""}”`);
-  if (!row.guardianName?.trim()) errors.push("Guardian name is missing");
-  if (!PHONE.test(row.guardianPhone ?? "")) errors.push("Guardian phone is invalid");
-  if (row.guardianEmail && !EMAIL.test(row.guardianEmail)) errors.push("Guardian email is invalid");
-  if (!row.guardianEmail) warnings.push("No guardian email – parent can't be invited to the portal");
-  if (row.admissionNo) {
-    if (ctx.db.students.rows.some((s) => s.admissionNo === row.admissionNo)) errors.push(`Admission no. ${row.admissionNo} already exists`);
-    if (seen.has(row.admissionNo)) errors.push("Duplicate admission no. in file");
-    seen.add(row.admissionNo);
+/** Same review as the real API: the shared row checks, then what needs data (class, numbers, people). */
+function reviewImport(ctx: Ctx, rows: ImportRow[]): ImportPreview {
+  if (!Array.isArray(rows) || !rows.length) fail(422, "validation", "The file has no data rows.");
+  if (rows.length > IMPORT_LIMITS.rows) fail(422, "validation", `Import at most ${IMPORT_LIMITS.rows.toLocaleString("en")} rows at a time.`);
+  const today = todayISO(ctx);
+  const classes = new Set(currentClasses(ctx.db).map((c) => c.name));
+  const checked = rows.map((r, i) => ({ index: i + 1, ...checkImportRow(r, today) }));
+  const personKey = (first: string, last: string, dob: string) => `${first.toLowerCase()}|${last.toLowerCase()}|${dob}`;
+  const onFile = new Map(ctx.db.students.rows.map((s) => [personKey(s.firstName, s.lastName, s.dob), s.admissionNo]));
+  const seenAdmission = new Map<string, number>();
+  const seenPerson = new Map<string, number>();
+  for (const r of checked) {
+    const d = r.data;
+    if (d.className && !/^\d{1,2}$/.test(d.className) && !classes.has(d.className)) r.errors.push(`No class “${d.className}” this year`);
+    if (d.admissionNo) {
+      if (ctx.db.students.rows.some((s) => s.admissionNo === d.admissionNo)) r.errors.push(`Admission no. ${d.admissionNo} already exists`);
+      else if (seenAdmission.has(d.admissionNo)) r.errors.push(`Admission no. ${d.admissionNo} is also on row ${seenAdmission.get(d.admissionNo)}`);
+      seenAdmission.set(d.admissionNo, seenAdmission.get(d.admissionNo) ?? r.index);
+    }
+    if (d.firstName && d.lastName && /^\d{4}-\d{2}-\d{2}$/.test(d.dob ?? "")) {
+      const key = personKey(d.firstName, d.lastName, d.dob!);
+      if (onFile.has(key)) r.warnings.push(`May already be enrolled as ${onFile.get(key)} (same name and date of birth)`);
+      else if (seenPerson.has(key)) r.warnings.push(`Same name and date of birth as row ${seenPerson.get(key)}`);
+      seenPerson.set(key, seenPerson.get(key) ?? r.index);
+    }
+    if (!r.errors.length) {
+      const guardian = { name: d.guardianName, email: d.guardianEmail, phone: d.guardianPhone };
+      const g = findMatchingGuardian(ctx.db, guardian);
+      if (g) {
+        r.warnings.push(`Guardian matches ${g.name} (${g.phone}), who is already on file; the student will be linked to them`);
+        if (d.guardianEmail && !sameGuardianName(g.name, d.guardianName)) {
+          r.warnings.push(`The email belongs to ${g.name}, not ${d.guardianName}; check it's the right parent`);
+        }
+      } else {
+        const others = othersWithPhone(ctx.db, guardian);
+        if (others.length) r.warnings.push(`${others[0]!.name} also uses ${d.guardianPhone}; ${d.guardianName} will be added as a separate guardian`);
+      }
+    }
   }
-  const dupe = ctx.db.students.rows.find((s) => s.firstName === row.firstName?.trim() && s.lastName === row.lastName?.trim() && s.dob === row.dob);
-  if (dupe) warnings.push(`Possible duplicate of ${dupe.admissionNo}`);
-  return { errors, warnings };
+  return {
+    rows: checked,
+    valid: checked.filter((r) => !r.errors.length).length,
+    invalid: checked.filter((r) => r.errors.length).length,
+  };
 }
 
 export const adminRoutes: Route[] = [
@@ -225,12 +250,7 @@ export const adminRoutes: Route[] = [
     path: "/imports/students/preview",
     handler: (ctx): ImportPreview => {
       requirePerm(ctx, "import.create");
-      const rows = (ctx.body?.rows ?? []) as ImportRow[];
-      if (!rows.length) fail(422, "validation", "The file has no data rows.");
-      if (rows.length > 2000) fail(422, "validation", "Import at most 2,000 rows at a time.");
-      const seen = new Set<string>();
-      const result = rows.map((data, index) => ({ index: index + 1, data, ...validateImportRow(ctx, data, seen) }));
-      return { rows: result, valid: result.filter((r) => !r.errors.length).length, invalid: result.filter((r) => r.errors.length).length };
+      return reviewImport(ctx, ctx.body?.rows as ImportRow[]);
     },
   },
   {
@@ -238,29 +258,32 @@ export const adminRoutes: Route[] = [
     path: "/imports/students/commit",
     handler: (ctx) => {
       requirePerm(ctx, "import.create");
-      const rows = (ctx.body?.rows ?? []) as ImportRow[];
-      const seen = new Set<string>();
+      const checked = reviewImport(ctx, ctx.body?.rows as ImportRow[]);
+      const ready = checked.rows.filter((r) => !r.errors.length);
+      if (!ready.length) fail(422, "validation", "No rows are ready to import. Fix the errors and try again.");
       const classes = currentClasses(ctx.db);
-      let created = 0;
       let invited = 0;
-      let skipped = 0;
-      for (const row of rows) {
-        if (validateImportRow(ctx, row, seen).errors.length) {
-          skipped++;
-          continue;
-        }
-        const cls = classes.find((c) => c.name === row.className.trim())!;
-        const { inviteLink } = createStudent(ctx, {
-          firstName: row.firstName, lastName: row.lastName, gender: row.gender.trim().toUpperCase() as "M" | "F", dob: row.dob,
-          classId: cls.id, address: row.address || "—",
-          guardian: { name: row.guardianName, relationship: "Guardian", phone: row.guardianPhone, email: row.guardianEmail || undefined },
-          inviteParent: !!ctx.body?.inviteParents,
-        });
-        created++;
+      for (const { data } of ready) {
+        const { inviteLink } = createStudent(
+          ctx,
+          {
+            admissionNo: data.admissionNo || undefined,
+            firstName: data.firstName, lastName: data.lastName, gender: data.gender as "M" | "F", dob: data.dob,
+            joinedDate: data.joinedDate || undefined, religion: data.religion || undefined,
+            classId: classes.find((c) => c.name === data.className)!.id, address: data.address || "—",
+            guardian: {
+              name: data.guardianName, relationship: (data.guardianRelationship || "Guardian") as Guardian["relationship"],
+              phone: data.guardianPhone, email: data.guardianEmail || undefined, address: data.address || undefined,
+            },
+            inviteParent: !!ctx.body?.inviteParents,
+          },
+          // Existing students were admitted long ago: no admission fee or first invoice.
+          { firstInvoice: false },
+        );
         if (inviteLink) invited++;
       }
-      audit(ctx, "import.students", "Import", `Imported ${created} students (${skipped} skipped, ${invited} parents invited)`);
-      return { created, skipped, invited };
+      audit(ctx, "import.students", "Import", `Imported ${ready.length} students (${checked.invalid} skipped, ${invited} parents invited)`);
+      return { created: ready.length, skipped: checked.invalid, invited, errors: checked.rows.filter((r) => r.errors.length).map((r) => ({ index: r.index, errors: r.errors })) };
     },
   },
 ];

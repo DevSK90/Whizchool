@@ -6,6 +6,7 @@ import type { SessionUser } from "@whizchool/shared/types";
 import type { AuthContext } from "../auth/context";
 import { config } from "../config";
 import { validationError } from "./errors";
+import { idempotent } from "./idempotency";
 import { checkRateLimit, type RateLimitRule } from "./rate-limit";
 
 /** Who may call a route. Checked before input validation and the handler. */
@@ -39,6 +40,8 @@ interface RouteBase<Q, B> {
    * is form-encoded. Requiring JSON elsewhere means a plain cross-site HTML form can't hit us.
    */
   bodyType?: "json" | "multipart" | "form";
+  /** Honour the Idempotency-Key header: a retried request returns the first result instead of repeating the work. */
+  idempotent?: boolean;
   /** Checked before the handler, after the body is parsed (so limits can key on e.g. the email). */
   rateLimit?: RateLimitRule[];
   /** HTTP status on success (default 200; 204 when the handler returns nothing). */
@@ -107,7 +110,8 @@ export function mountRoutes(router: Router, routes: RouteDef<any, any>[]) {
         session: auth?.session ?? null,
       };
       // `authorize` guarantees `auth` for non-public routes.
-      const result = await (route.handler as (c: typeof ctx) => unknown)(ctx);
+      const run = async () => (route.handler as (c: typeof ctx) => unknown)(ctx);
+      const result = route.idempotent ? await idempotent(req, res, auth?.session.id ?? `ip:${req.ip}`, req.body, run) : await run();
       if (res.headersSent) return;
       if (result === undefined) res.status(route.status ?? 204).end();
       else res.status(route.status ?? 200).json(result);

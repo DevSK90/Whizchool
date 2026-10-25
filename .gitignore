@@ -27,3 +27,9 @@ playwright/.cache/
 
 # Prisma generated client
 apps/api/src/generated/
+
+# Uploaded files in development
+apps/api/storage/
+
+# Upload storage used by tests
+apps/api/storage-*/

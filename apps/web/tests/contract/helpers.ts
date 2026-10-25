@@ -48,6 +48,34 @@ export function call(method: HttpMethod, path: string, body?: unknown, query?: Q
 
 export const get = (path: string, query?: QueryParams) => call("GET", path, undefined, query);
 
+// Real file bytes, so the real API's type detection and image processing run in these tests.
+const PNG_1X1 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
+export const FILES = {
+  png: (name = "photo.png") => ({ name, mimeType: "image/png", bytes: Uint8Array.from(atob(PNG_1X1), (c) => c.charCodeAt(0)) }),
+  pdf: (name = "document.pdf") => ({ name, mimeType: "application/pdf", bytes: new TextEncoder().encode("%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n") }),
+  gif: (name = "anim.gif") => ({ name, mimeType: "image/gif", bytes: new TextEncoder().encode("GIF89a\u0001\u0000\u0001\u0000\u0000\u0000\u0000;") }),
+  tooBig: (name = "huge.pdf") => ({ name, mimeType: "application/pdf", bytes: new Uint8Array(6 * 1024 * 1024).fill(32) }),
+};
+
+/** Uploads a file the way the web app does: multipart to the real API, JSON metadata to the demo. */
+export async function upload(file: { name: string; mimeType: string; bytes: Uint8Array }, purpose: string): Promise<Json> {
+  if (TARGET === "demo") {
+    const dataUrl = file.mimeType.startsWith("image/") ? `data:${file.mimeType};base64,${btoa(String.fromCharCode(...file.bytes))}` : undefined;
+    return call("POST", "/uploads", { name: file.name, size: file.bytes.length, mimeType: file.mimeType, purpose, dataUrl });
+  }
+  const form = new FormData();
+  form.append("purpose", purpose);
+  form.append("file", new Blob([new Uint8Array(file.bytes)], { type: file.mimeType }), file.name);
+  const res = await fetch(`${API_URL}/uploads`, {
+    method: "POST",
+    headers: { Origin: APP_ORIGIN, ...(sessionCookie ? { Cookie: `${SESSION_COOKIE}=${sessionCookie}` } : {}) },
+    body: form,
+  });
+  const data = await res.json().catch(() => null);
+  if (!res.ok) throw new ApiError(res.status, data?.error?.code ?? "unknown", data?.error?.message ?? res.statusText, data?.error?.fields);
+  return data;
+}
+
 /** Restores the demo school. Over HTTP this uses the API's test-only reset route (enabled in test mode). */
 export async function resetData() {
   if (TARGET === "http") {

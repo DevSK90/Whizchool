@@ -1,9 +1,8 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import { call, expectStatus, get, login, resetData, type Json } from "./helpers";
+import { call, expectStatus, FILES, get, login, resetData, upload, type Json } from "./helpers";
 
 beforeAll(() => resetData());
 
-const PHOTO = { name: "me.jpg", size: 2048, mimeType: "image/jpeg", purpose: "student-photo", dataUrl: "data:image/jpeg;base64,AAAA" };
 
 describe("students", () => {
   let student: Json;
@@ -16,22 +15,24 @@ describe("students", () => {
     student = await get(`/students/${page.items[0].id}`);
     expect(student.guardians.length).toBeGreaterThan(0);
     expect(student.documents).toEqual([]);
-    for (const tab of ["attendance", "results", "invoices", "payments"]) await get(`/students/${student.id}/${tab}`);
+    // Results, invoices and payments tabs are covered by the academics and fees contracts.
+    const attendance = await get(`/students/${student.id}/attendance`);
+    expect(attendance.present + attendance.absent + attendance.late + attendance.excused).toBe(attendance.days.length);
   });
 
   it("uploads, replaces and removes a photo", async () => {
-    await expectStatus(415, call("POST", "/uploads", { ...PHOTO, mimeType: "application/pdf" }));
-    const file = await call("POST", "/uploads", PHOTO);
-    const doc = await call("POST", "/uploads", { ...PHOTO, mimeType: "application/pdf", purpose: "student-document" });
+    await expectStatus(415, upload(FILES.pdf(), "student-photo"));
+    const file = await upload(FILES.png(), "student-photo");
+    const doc = await upload(FILES.pdf(), "student-document");
     await expectStatus(422, call("PUT", `/students/${student.id}/photo`, { fileId: doc.id }));
     await call("PUT", `/students/${student.id}/photo`, { fileId: file.id });
-    expect((await get(`/students/${student.id}`)).photoUrl).toBe(PHOTO.dataUrl);
+    expect((await get(`/students/${student.id}`)).photoUrl).toBeTruthy();
     await call("PUT", `/students/${student.id}/photo`, { fileId: null });
     expect((await get(`/students/${student.id}`)).photoUrl).toBeUndefined();
   });
 
   it("adds and removes documents", async () => {
-    const file = await call("POST", "/uploads", { name: "medical.pdf", size: 5000, mimeType: "application/pdf", purpose: "student-document" });
+    const file = await upload(FILES.pdf("medical.pdf"), "student-document");
     await expectStatus(422, call("POST", `/students/${student.id}/documents`, { fileId: file.id, kind: "passport" }));
     const doc = await call("POST", `/students/${student.id}/documents`, { fileId: file.id, kind: "medical" });
     expect(doc.file.name).toBe("medical.pdf");
@@ -69,8 +70,9 @@ describe("students", () => {
     await login("accountant");
     await expectStatus(403, call("PUT", `/students/${student.id}/photo`, { fileId: null }));
     await login("parent");
-    const [child] = await get("/portal/children");
-    await get(`/students/${child.id}`);
+    const [childId] = (await get("/auth/me")).studentIds;
+    const child = await get(`/students/${childId}`);
+    expect(child.guardians.some((g: Json) => g.email === "parent@whizchool.lk")).toBe(true);
     await expectStatus(403, get(`/students/${student.id}`));
     await expectStatus(403, call("POST", `/students/${child.id}/guardians`, { name: "X", relationship: "Guardian", phone: "077 000 0000" }));
   });

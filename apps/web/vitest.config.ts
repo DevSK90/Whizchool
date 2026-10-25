@@ -2,7 +2,14 @@ import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 
 // Contract files the real API already passes. Add each area as its phase lands (BACKEND_PLAN.md §5).
-const API_CONTRACTS = ["tests/contract/auth.test.ts", "tests/contract/admin.test.ts", "tests/contract/school.test.ts"];
+const API_CONTRACTS = [
+  "tests/contract/auth.test.ts",
+  "tests/contract/admin.test.ts",
+  "tests/contract/school.test.ts",
+  "tests/contract/students.test.ts",
+  "tests/contract/admissions.test.ts",
+  "tests/contract/import.test.ts",
+];
 
 // `--mode api` runs those contract tests over HTTP against the real API (see tests/contract/helpers.ts).
 export default defineConfig(({ mode }) => ({

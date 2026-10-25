@@ -2,7 +2,7 @@ import type { Route } from "../router";
 import type { DocumentKind, Guardian } from "@whizchool/shared/types";
 import { audit, fail, fileRef, fullName, isoNow, requireAuth, requirePerm } from "../helpers";
 import { nextId } from "../db";
-import { inviteUser } from "./students";
+import { findMatchingGuardian, inviteUser } from "./students";
 
 const MAX_BYTES = 5 * 1024 * 1024;
 const DOC_TYPES = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
@@ -98,10 +98,7 @@ export const fileRoutes: Route[] = [
       if (email && !EMAIL.test(email)) f.email = "Enter a valid email";
       if (!["Father", "Mother", "Guardian"].includes(relationship)) f.relationship = "Required";
       if (Object.keys(f).length) fail(422, "validation", "Please fix the highlighted fields.", f);
-      const digits = (v?: string) => (v ?? "").replace(/\D/g, "");
-      let g: Guardian | undefined = db.guardians.rows.find(
-        (x) => (email && x.email?.toLowerCase() === String(email).toLowerCase()) || digits(x.phone) === digits(phone),
-      );
+      let g: Guardian | undefined = findMatchingGuardian(db, { name, email, phone });
       const linked = !!g;
       if (g && s.guardianIds.includes(g.id)) fail(409, "duplicate", "This guardian is already linked to the student.");
       g ??= db.guardians.insert({

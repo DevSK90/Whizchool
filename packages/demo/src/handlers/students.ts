@@ -9,6 +9,8 @@ import type {
   StudentResults,
 } from "@whizchool/shared/types";
 import { gradeFor } from "@whizchool/shared/grading";
+import { sameGuardianName } from "@whizchool/shared/people";
+import { normalizeLocalPhone } from "@whizchool/shared/phone";
 import {
   assertStudentAccess,
   audit,
@@ -46,7 +48,36 @@ export interface NewStudentInput {
   discountIds?: string[];
   guardian: Omit<Guardian, "id" | "userId">;
   inviteParent?: boolean;
+  /** Kept from earlier records (imports); otherwise the next number is issued. */
+  admissionNo?: string;
+  /** Defaults to today. */
+  joinedDate?: string;
 }
+
+/**
+ * The guardian a new student should share, if one is already on file: same email, or, when
+ * either side has no email, the same phone number (siblings share one parent record).
+ */
+export function findMatchingGuardian(db: DB, input: { name: string; email?: string; phone: string }) {
+  const email = input.email?.trim().toLowerCase();
+  const phone = normalizeLocalPhone(input.phone) ?? input.phone.trim();
+  if (email) {
+    const byEmail = db.guardians.rows.find((g) => g.email?.toLowerCase() === email);
+    if (byEmail) return byEmail;
+  }
+  // A phone alone isn't enough: both parents often share one. The names must agree too.
+  return db.guardians.rows.find((g) => g.phone === phone && (!email || !g.email) && sameGuardianName(g.name, input.name));
+}
+
+/** Guardians on file with this phone but a different name. */
+export function othersWithPhone(db: DB, input: { name: string; phone: string }) {
+  const phone = normalizeLocalPhone(input.phone) ?? input.phone.trim();
+  return db.guardians.rows.filter((g) => g.phone === phone && !sameGuardianName(g.name, input.name));
+}
+
+/** "Kavindu Nimesh" + "Perera" → "K. N. Perera" */
+const nameWithInitials = (first: string, last: string) =>
+  `${first.split(/\s+/).filter(Boolean).map((n) => `${n[0]!.toUpperCase()}.`).join(" ")} ${last}`;
 
 function validateStudent(db: DB, input: Partial<NewStudentInput>) {
   const fields: Record<string, string> = {};
@@ -75,63 +106,77 @@ export function inviteUser(ctx: Ctx, user: { name: string; email: string; phone?
   return { user: u, inviteLink: `/invite/${token}` };
 }
 
-/** Creates the student, guardian, enrollment and the first invoice (admission + current month). */
-export function createStudent(ctx: Ctx, input: NewStudentInput) {
+/**
+ * Creates the student, guardian (new or matched), enrollment and, for new admissions, the first
+ * invoice (admission + deposit + current month). Imported students get no invoice.
+ */
+export function createStudent(ctx: Ctx, input: NewStudentInput, opts: { firstInvoice: boolean } = { firstInvoice: true }) {
   const db = ctx.db;
   validateStudent(db, input);
   const g = input.guardian;
   if (!g?.name?.trim() || !g.phone?.trim()) {
     fail(422, "validation", "Guardian name and phone are required.", { "guardian.name": g?.name ? "" : "Required", "guardian.phone": g?.phone ? "" : "Required" });
   }
-  const existingGuardian = g.email ? db.guardians.rows.find((x) => x.email?.toLowerCase() === g.email!.toLowerCase()) : undefined;
-  const guardian = existingGuardian ?? db.guardians.insert({ ...g, id: nextId(db, "gdn") });
+  if (input.admissionNo && db.students.rows.some((x) => x.admissionNo === input.admissionNo)) {
+    fail(409, "duplicate", `Admission no. ${input.admissionNo} already exists.`, { admissionNo: "Already exists" });
+  }
+  const existingGuardian = findMatchingGuardian(db, { name: g.name, email: g.email, phone: g.phone });
+  const guardian = existingGuardian ?? db.guardians.insert({ ...g, phone: normalizeLocalPhone(g.phone) ?? g.phone, email: g.email?.toLowerCase() || undefined, id: nextId(db, "gdn") });
   const cls = db.classes.get(input.classId)!;
   const student: Student = {
     id: nextId(db, "stu"),
-    admissionNo: String(nextNumber(db, "admissionNo", 10850 + db.students.size)),
+    admissionNo: input.admissionNo || String(nextNumber(db, "admissionNo", 10850 + db.students.size)),
     firstName: input.firstName.trim(),
     lastName: input.lastName.trim(),
-    nameWithInitials: `${input.firstName.trim()[0]}. ${input.lastName.trim()}`,
+    nameWithInitials: nameWithInitials(input.firstName.trim(), input.lastName.trim()),
     gender: input.gender,
     dob: input.dob,
     classId: cls.id,
     gradeId: cls.gradeId,
     status: "active",
-    joinedDate: todayISO(ctx),
+    joinedDate: input.joinedDate || todayISO(ctx),
     address: input.address,
     religion: input.religion,
     medical: input.medical,
     guardianIds: [guardian.id],
     electiveSubjectIds: input.electiveSubjectIds ?? [],
-    discountIds: input.discountIds ?? (existingGuardian ? ["disc_sibling"] : []),
+    discountIds: input.discountIds ?? [],
   };
   db.students.insert(student);
   db.enrollments.insert({ id: nextId(db, "enr"), studentId: student.id, yearId: cls.yearId, classId: cls.id });
 
   // First invoice: admission + deposit + current month tuition
-  const today = todayISO(ctx);
-  const period = today.slice(0, 7);
-  const fs = (feeTypeId: string) => db.feeStructures.rows.find((f) => f.gradeId === cls.gradeId && f.feeTypeId === feeTypeId)?.amount ?? 0;
-  const tuition = fs("fee_tuition");
-  const pct = student.discountIds.map((d) => db.discounts.get(d)).reduce((a, d) => a + (d?.kind === "percent" ? d.value : 0), 0);
-  const lines = [
-    { id: "l1", feeTypeId: "fee_admission", description: "Admission fee", amount: fs("fee_admission"), discount: 0 },
-    { id: "l2", feeTypeId: "fee_deposit", description: "Refundable deposit", amount: fs("fee_deposit"), discount: 0 },
-    { id: "l3", feeTypeId: "fee_tuition", description: `Tuition fee – ${period}`, amount: tuition, discount: Math.round((tuition * pct) / 100) },
-  ];
-  const total = lines.reduce((a, l) => a + l.amount - l.discount, 0);
-  const due = new Date(ctx.now.getTime() + 14 * 86400000);
-  db.invoices.insert({
-    id: nextId(db, "inv"), number: `INV-${period.slice(0, 4)}-${String(nextNumber(db, "invoiceNo")).padStart(6, "0")}`,
-    studentId: student.id, period, issueDate: today, dueDate: `${due.getFullYear()}-${String(due.getMonth() + 1).padStart(2, "0")}-${String(due.getDate()).padStart(2, "0")}`,
-    lines, total, paid: 0, balance: total, status: "unpaid",
-  });
+  if (opts.firstInvoice) {
+    const today = todayISO(ctx);
+    const period = today.slice(0, 7);
+    const fs = (feeTypeId: string) => db.feeStructures.rows.find((f) => f.gradeId === cls.gradeId && f.feeTypeId === feeTypeId)?.amount ?? 0;
+    const tuition = fs("fee_tuition");
+    const pct = student.discountIds.map((d) => db.discounts.get(d)).reduce((a, d) => a + (d?.kind === "percent" ? d.value : 0), 0);
+    const lines = [
+      { id: "l1", feeTypeId: "fee_admission", description: "Admission fee", amount: fs("fee_admission"), discount: 0 },
+      { id: "l2", feeTypeId: "fee_deposit", description: "Refundable deposit", amount: fs("fee_deposit"), discount: 0 },
+      { id: "l3", feeTypeId: "fee_tuition", description: `Tuition fee – ${period}`, amount: tuition, discount: Math.round((tuition * pct) / 100) },
+    ];
+    const total = lines.reduce((a, l) => a + l.amount - l.discount, 0);
+    const due = new Date(ctx.now.getTime() + 14 * 86400000);
+    db.invoices.insert({
+      id: nextId(db, "inv"), number: `INV-${period.slice(0, 4)}-${String(nextNumber(db, "invoiceNo")).padStart(6, "0")}`,
+      studentId: student.id, period, issueDate: today, dueDate: `${due.getFullYear()}-${String(due.getMonth() + 1).padStart(2, "0")}-${String(due.getDate()).padStart(2, "0")}`,
+      lines, total, paid: 0, balance: total, status: "unpaid",
+    });
+  }
 
   let inviteLink: string | undefined;
   if (input.inviteParent && guardian.email && !guardian.userId) {
-    const res = inviteUser(ctx, { name: guardian.name, email: guardian.email, phone: guardian.phone, kind: "parent", roleIds: ["role_parent"], guardianId: guardian.id });
-    guardian.userId = res.user.id;
-    inviteLink = res.inviteLink;
+    // A parent who already has an account (a sibling's) is linked, not invited again.
+    const account = db.users.rows.find((u) => u.email.toLowerCase() === guardian.email!.toLowerCase());
+    if (!account) {
+      const res = inviteUser(ctx, { name: guardian.name, email: guardian.email, phone: guardian.phone, kind: "parent", roleIds: ["role_parent"], guardianId: guardian.id });
+      guardian.userId = res.user.id;
+      inviteLink = res.inviteLink;
+    } else if (account.kind === "parent" && !db.guardians.rows.some((x) => x.userId === account.id)) {
+      guardian.userId = account.id;
+    }
   }
   audit(ctx, "student.create", "Student", `Enrolled ${fullName(student)} (${student.admissionNo}) in ${cls.name}`, student.id);
   return { student, inviteLink };

@@ -48,6 +48,10 @@ const schema = z.object({
    * (the demo UI shows them). Development and tests only; refused in production.
    */
   EXPOSE_DEV_LINKS: z.enum(["true", "false"]).optional(),
+  /** Where uploaded files are kept (local disk; S3-compatible storage arrives with deployment). */
+  STORAGE_DIR: z.string().default("storage"),
+  /** Signs short-lived file links. Required (32+ characters) in production. */
+  FILE_URL_SECRET: z.string().min(32, "Use at least 32 characters").optional(),
   /** Per-IP limits on sign-in, password reset and other abuse-prone endpoints. */
   RATE_LIMITS: bool("true"),
   /** Mounts /api/v1/test/* (database reset for the contract suite). Refused in production. */
@@ -68,12 +72,15 @@ function load() {
     COOKIE_SECURE: env.COOKIE_SECURE ? env.COOKIE_SECURE === "true" : production,
     EMAIL_TRANSPORT: env.EMAIL_TRANSPORT ?? (production ? "resend" : env.NODE_ENV === "test" ? "log" : "smtp"),
     EXPOSE_DEV_LINKS: env.EXPOSE_DEV_LINKS ? env.EXPOSE_DEV_LINKS === "true" : !production,
+    // A fixed development secret keeps file links valid across restarts; production must set its own.
+    FILE_URL_SECRET: env.FILE_URL_SECRET ?? (production ? "" : "whizchool-development-file-url-secret!"),
   };
   if (production) {
     const unsafe = [
       config.ENABLE_TEST_ROUTES && "ENABLE_TEST_ROUTES (allows wiping the database)",
       config.EXPOSE_DEV_LINKS && "EXPOSE_DEV_LINKS (leaks invite and reset links)",
       !config.COOKIE_SECURE && "COOKIE_SECURE=false (session cookie over plain HTTP)",
+      !config.FILE_URL_SECRET && "FILE_URL_SECRET missing (file links can't be signed)",
     ].filter(Boolean);
     if (unsafe.length) throw new Error(`Unsafe production configuration: ${unsafe.join("; ")}.`);
   }

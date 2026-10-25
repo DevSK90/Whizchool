@@ -674,7 +674,12 @@ export interface ImportRow {
   guardianName: string;
   guardianPhone: string;
   guardianEmail?: string;
+  /** Father, Mother or Guardian (default Guardian). */
+  guardianRelationship?: string;
   address?: string;
+  religion?: string;
+  /** When the student joined the school (default: the import day). */
+  joinedDate?: string;
 }
 
 export interface ImportPreview {

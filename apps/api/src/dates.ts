@@ -12,3 +12,8 @@ export const isoDate = (message = "Enter a valid date") =>
     .regex(/^\d{4}-\d{2}-\d{2}$/, message)
     .refine((s) => !Number.isNaN(Date.parse(`${s}T00:00:00Z`)) && toIsoDate(fromIsoDate(s)) === s, message);
 
+
+/** Today's date at the school (Asia/Colombo), as "yyyy-mm-dd". */
+export const schoolToday = (now = new Date()) => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Colombo" }).format(now);
+
+export const addDays = (iso: string, days: number) => toIsoDate(new Date(fromIsoDate(iso).getTime() + days * 86_400_000));

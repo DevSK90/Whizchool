@@ -33,6 +33,23 @@ export function inviteEmail(to: { name: string; email: string; kind: "staff" | "
   };
 }
 
+export function applicationReceivedEmail(to: { name: string; email: string }, schoolName: string, application: { refNo: string; studentName: string; gradeName: string }): Email {
+  return {
+    to: to.email,
+    subject: `Application ${application.refNo} received – ${schoolName}`,
+    ...layout(
+      schoolName,
+      [
+        `Hello ${to.name},`,
+        `Thank you for applying to ${schoolName}. We have received the application for ${application.studentName} (${application.gradeName}).`,
+        `Your reference number is ${application.refNo}. Keep it to check the application's progress.`,
+      ],
+      { label: "Check application status", url: `${config.APP_URL}/apply/status?ref=${encodeURIComponent(application.refNo)}` },
+      "We'll contact you about the next steps. If you didn't submit this application, please let the school office know.",
+    ),
+  };
+}
+
 export function resetEmail(to: { name: string; email: string }, schoolName: string, token: string): Email {
   return {
     to: to.email,

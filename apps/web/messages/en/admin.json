@@ -168,25 +168,103 @@
   },
   "import": {
     "title": "Import students",
-    "description": "Bring existing students and guardians in from Excel or CSV. Nothing is saved until you review and confirm.",
-    "step1": "1. Download the template",
-    "step1Body": "Fill one row per student. Class must match an existing class name such as 10-A or 12-PS. Dates use YYYY-MM-DD.",
+    "description": "Bring existing students and guardians in from Excel or a CSV file. Nothing is saved until you review and confirm.",
+    "step1": "1. Prepare your file",
+    "step1Body": "Start from the template, or use your own spreadsheet. Columns can be in any order and named your own way: you match them to Whizchool fields in step 3.",
     "template": "Download CSV template",
+    "excelTip": "In Excel, save with File → Save As → “CSV UTF-8 (Comma delimited)” so Sinhala and Tamil names keep their letters.",
+    "guideToggle": "Column guide",
+    "guideColumn": "Column",
+    "guideNeed": "Needed?",
+    "required": "Required",
+    "optional": "Optional",
+    "guideAccepts": "What it accepts",
+    "guideExample": "Example",
     "step2": "2. Upload your file",
     "choose": "Choose CSV file",
     "sample": "Try with sample data",
+    "fileInfo": "{name} · {rows} rows · {columns} columns",
+    "notCsv": "Please choose a .csv file. In Excel use File → Save As → CSV UTF-8.",
+    "empty": "The file has no data rows below the header row.",
+    "noHeader": "The first row must hold the column names, such as First Name and Class.",
+    "tooBig": "The file is larger than 5 MB. Split it into smaller files.",
+    "tooManyRows": "The file has {count} rows. Import at most {max} at a time.",
+    "encodingNote": "This file wasn't saved as UTF-8, so letters outside English may look wrong. If names look garbled, save it again as “CSV UTF-8”.",
+    "step3": "3. Match your columns",
+    "mapBody": "We recognised {matched} of {total} columns. Check each match, and choose what any other column contains.",
+    "fileColumn": "Column in your file",
+    "sampleValue": "First row",
+    "importsAs": "Imports as",
+    "ignore": "Don't import",
+    "missing": "Still needed: {fields}.",
+    "duplicate": "{field} is chosen for more than one column. Keep it on one.",
+    "check": "Check {count} rows",
     "parsing": "Checking {count} rows…",
-    "step3": "3. Review",
+    "step4": "4. Review",
     "summary": "{valid} ready to import · {invalid} with errors",
     "onlyErrors": "Show only rows with problems",
+    "downloadErrors": "Download rows with problems",
     "row": "Row",
     "issues": "Issues",
     "ok": "Ready",
     "invite": "Email parent-portal invitations to guardians with an email address",
     "commit": "Import {count} students",
     "done": "Imported {created} students ({skipped} skipped, {invited} parents invited).",
-    "notCsv": "Please choose a .csv file. In Excel use File → Save As → CSV.",
-    "empty": "The file has no data rows."
+    "problems": "Problems",
+    "fields": {
+      "admissionNo": {
+        "label": "Admission no.",
+        "accepts": "Leave empty to number new students automatically. Must not already exist."
+      },
+      "firstName": {
+        "label": "First name",
+        "accepts": "Text"
+      },
+      "lastName": {
+        "label": "Last name",
+        "accepts": "Text"
+      },
+      "gender": {
+        "label": "Gender",
+        "accepts": "M or F (Male, Female, Boy and Girl also work)"
+      },
+      "dob": {
+        "label": "Date of birth",
+        "accepts": "DD/MM/YYYY, YYYY-MM-DD or 14 Mar 2016"
+      },
+      "className": {
+        "label": "Class",
+        "accepts": "An existing class this year: 4-A, 4A, 4 A or Grade 4 A (A/L: 12-PS)"
+      },
+      "guardianName": {
+        "label": "Guardian name",
+        "accepts": "Text"
+      },
+      "guardianPhone": {
+        "label": "Guardian phone",
+        "accepts": "0771234567, 077 123 4567 or +94 77 123 4567. A leading 0 that Excel dropped is put back."
+      },
+      "guardianEmail": {
+        "label": "Guardian email",
+        "accepts": "Needed to invite the parent to the portal"
+      },
+      "guardianRelationship": {
+        "label": "Relationship",
+        "accepts": "Father, Mother or Guardian (default: Guardian)"
+      },
+      "address": {
+        "label": "Address",
+        "accepts": "Text"
+      },
+      "religion": {
+        "label": "Religion",
+        "accepts": "Text"
+      },
+      "joinedDate": {
+        "label": "Admission date",
+        "accepts": "When the student joined the school (default: the import day)"
+      }
+    }
   },
   "settings": {
     "title": "School settings",

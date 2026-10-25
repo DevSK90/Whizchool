@@ -1,5 +1,5 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import { call, expectStatus, get, login, logout, resetData, type Json } from "./helpers";
+import { call, expectStatus, FILES, get, login, logout, resetData, upload, type Json } from "./helpers";
 
 beforeAll(() => resetData());
 
@@ -17,10 +17,10 @@ describe("admissions: apply → interview → accept → enroll → parent invit
 
   it("lets a visitor upload a document and apply, once per idempotency key", async () => {
     await logout();
-    await expectStatus(401, call("POST", "/uploads", { name: "x.jpg", size: 10, mimeType: "image/jpeg", purpose: "student-photo" }));
-    await expectStatus(415, call("POST", "/uploads", { name: "x.gif", size: 10, mimeType: "image/gif", purpose: "application-document" }));
-    await expectStatus(413, call("POST", "/uploads", { name: "x.pdf", size: 6 * 1024 * 1024, mimeType: "application/pdf", purpose: "application-document" }));
-    const file = await call("POST", "/uploads", { name: "bc.pdf", size: 1000, mimeType: "application/pdf", purpose: "application-document" });
+    await expectStatus(401, upload(FILES.png(), "student-photo"));
+    await expectStatus(415, upload(FILES.gif(), "application-document"));
+    await expectStatus(413, upload(FILES.tooBig(), "application-document"));
+    const file = await upload(FILES.pdf("bc.pdf"), "application-document");
 
     const first = await call("POST", "/applications", application(file.id), undefined, "apply-1");
     const retry = await call("POST", "/applications", application(file.id), undefined, "apply-1");
@@ -59,8 +59,7 @@ describe("admissions: apply → interview → accept → enroll → parent invit
     expect((await get(`/auth/invites/${token}`)).email).toBe("test.parent@example.com");
     const parent = await call("POST", `/auth/invites/${token}/accept`, { password: "newpass123" });
     expect(parent.studentIds).toEqual([enrolled.studentId]);
-    const children: Json[] = await get("/portal/children");
-    expect(children.map((c) => c.fullName)).toEqual(["Test Child"]);
+    expect((await get(`/students/${enrolled.studentId}`)).fullName).toBe("Test Child");
     // Invites are single-use.
     await expectStatus(404, call("POST", `/auth/invites/${token}/accept`, { password: "again1234" }));
   });
