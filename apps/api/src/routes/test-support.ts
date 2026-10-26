@@ -1,5 +1,8 @@
+import { z } from "zod";
+import { isoDate, schoolToday, setSchoolToday } from "../dates";
 import { prisma } from "../db";
 import { sentEmails } from "../email/mailer";
+import { sentSms } from "../sms/sender";
 import { resetRateLimits } from "../http/rate-limit";
 import { defineRoute } from "../http/route";
 import { logger } from "../logger";
@@ -16,7 +19,20 @@ export const testSupportRoutes = [
       logger.info(await seedDemoSchool(prisma));
       resetRateLimits();
       sentEmails.length = 0;
+      sentSms.length = 0;
+      setSchoolToday(null);
       return undefined;
+    },
+  }),
+  defineRoute({
+    method: "POST",
+    path: "/test/clock",
+    access: "public",
+    summary: "Pin the school's \"today\" (null to use the real date)",
+    body: z.object({ today: isoDate().nullable() }),
+    handler: ({ body }) => {
+      setSchoolToday(body.today);
+      return { today: schoolToday() };
     },
   }),
 ];

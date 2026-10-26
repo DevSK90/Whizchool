@@ -51,6 +51,9 @@ function createTransport(): Transport {
 
 const transport = createTransport();
 
+/** Sends and reports failure by throwing; the job queue uses this so it can retry. */
+export const deliverEmail = (email: Email) => transport(email);
+
 /**
  * Sends without failing the caller: a mail outage must not undo an invite or block a reset.
  * Failures are logged and recorded in the EventLog. (Phase 4 moves sending onto the job queue with retries.)

@@ -101,3 +101,6 @@ export const login = (who: "admin" | "principal" | "teacher" | "accountant" | "p
   call("POST", "/auth/login", { email: `${who}@whizchool.lk`, password });
 
 export const logout = () => call("POST", "/auth/logout");
+
+/** Pins the school's "today" (null for the real date), so date rules don't depend on when tests run. */
+export const setToday = (today: string | null) => call("POST", "/test/clock", { today });

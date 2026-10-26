@@ -13,7 +13,7 @@
     "test:watch": "vitest",
     "postinstall": "prisma generate",
     "db:generate": "prisma generate",
-    "db:migrate": "prisma migrate dev",
+    "db:migrate": "prisma migrate dev && prisma generate",
     "db:deploy": "prisma migrate deploy",
     "db:seed": "prisma db seed",
     "db:reset": "prisma migrate reset --force"
@@ -29,6 +29,7 @@
     "multer": "^2.5.0",
     "nodemailer": "^10.2.1",
     "pg": "^8.23.1",
+    "pg-boss": "^12.38.0",
     "pino": "^10.4.0",
     "pino-http": "^11.0.0",
     "sharp": "^0.35.5",

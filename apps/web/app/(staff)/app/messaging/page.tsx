@@ -22,10 +22,12 @@ import { EmptyState, ErrorState, CardsSkeleton } from "@/components/shared/state
 import { StatusBadge } from "@/components/shared/status-badge";
 import { api, ApiError } from "@/lib/api/client";
 import { useApiMutation, useAudience, useClasses, useGrades, useMessages, useNotices, useSchool } from "@/lib/api/hooks";
+import { SMS_MAX_PARTS, smsLength } from "@whizchool/shared/sms";
 import type { AudienceType, MessageChannel, Notice } from "@whizchool/shared/types";
 import { useCan } from "@/lib/auth";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { useUrlState } from "@/hooks/use-url-state";
+import { cn } from "@/lib/utils";
 
 export default function MessagingPage() {
   const t = useTranslations("admin.messaging");
@@ -66,8 +68,9 @@ function Compose({ onSent }: { onSent: () => void }) {
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const count = useAudience(audience, audience === "grade" || audience === "class" ? ids : []);
-  const parts = Math.max(1, Math.ceil(body.length / 160));
+  const count = useAudience(audience, audience === "grade" || audience === "class" ? ids : [], channel);
+  // Sinhala and Tamil switch the SMS to Unicode: 70 characters per message instead of 160.
+  const sms = smsLength(body);
   const send = useApiMutation(() => api.post("/messages", { channel, audience: { type: audience, ids }, subject, body }), {
     invalidate: [["messages"]],
     success: t("sent", { count: count.data?.count ?? 0 }),
@@ -86,6 +89,7 @@ function Compose({ onSent }: { onSent: () => void }) {
     const e: Record<string, string> = {};
     if (!body.trim()) e.body = tc("required");
     if (channel === "email" && !subject.trim()) e.subject = tc("required");
+    if (channel === "sms" && sms.parts > SMS_MAX_PARTS) e.body = t("tooLong", { max: SMS_MAX_PARTS });
     if (needIds && !ids.length) e.audience = tc("required");
     setErrors(e);
     return !Object.keys(e).length;
@@ -137,7 +141,10 @@ function Compose({ onSent }: { onSent: () => void }) {
                   })}
                 </div>
               )}
-              <FieldDescription className="tabular">{count.data ? t("recipients", { count: count.data.count }) : " "}</FieldDescription>
+              <FieldDescription className="tabular">
+                {count.data ? t("recipients", { count: count.data.count }) : " "}
+                {!!count.data?.unreachable && ` · ${t(channel === "sms" ? "noPhone" : "noEmail", { count: count.data.unreachable })}`}
+              </FieldDescription>
               <FieldError>{errors.audience}</FieldError>
             </Field>
             {channel === "email" && (
@@ -149,10 +156,11 @@ function Compose({ onSent }: { onSent: () => void }) {
             )}
             <Field data-invalid={!!errors.body}>
               <FieldLabel htmlFor="body">{t("body")}</FieldLabel>
-              <Textarea id="body" rows={channel === "sms" ? 4 : 8} value={body} maxLength={channel === "sms" ? 480 : undefined} onChange={(e) => setBody(e.target.value)} aria-invalid={!!errors.body} />
+              <Textarea id="body" rows={channel === "sms" ? 4 : 8} value={body} onChange={(e) => setBody(e.target.value)} aria-invalid={!!errors.body || (channel === "sms" && sms.parts > SMS_MAX_PARTS)} />
               {channel === "sms" && (
-                <FieldDescription className="tabular">
-                  {t("smsCount", { chars: body.length, parts })} · {t("senderId", { id: school?.smsSenderId ?? "" })}
+                <FieldDescription className={cn("tabular", sms.parts > SMS_MAX_PARTS && "text-destructive")}>
+                  {t("smsCount", { chars: sms.units, parts: sms.parts })}
+                  {sms.encoding === "UCS-2" && ` · ${t("unicode", { per: sms.perPart })}`} · {t("senderId", { id: school?.smsSenderId ?? "" })}
                 </FieldDescription>
               )}
               <FieldError>{errors.body}</FieldError>

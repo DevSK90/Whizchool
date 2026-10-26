@@ -13,7 +13,14 @@ export const isoDate = (message = "Enter a valid date") =>
     .refine((s) => !Number.isNaN(Date.parse(`${s}T00:00:00Z`)) && toIsoDate(fromIsoDate(s)) === s, message);
 
 
+let todayOverride: string | null = null;
+
+/** Tests only (set through /test/clock): pins "today" so date rules don't depend on the real calendar. */
+export function setSchoolToday(date: string | null) {
+  todayOverride = date;
+}
+
 /** Today's date at the school (Asia/Colombo), as "yyyy-mm-dd". */
-export const schoolToday = (now = new Date()) => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Colombo" }).format(now);
+export const schoolToday = (now = new Date()) => todayOverride ?? new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Colombo" }).format(now);
 
 export const addDays = (iso: string, days: number) => toIsoDate(new Date(fromIsoDate(iso).getTime() + days * 86_400_000));

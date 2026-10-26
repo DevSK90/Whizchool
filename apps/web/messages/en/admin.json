@@ -38,7 +38,11 @@
         "meetingText": "Dear parent, a parent–teacher meeting for {class} will be held on {date} at {time} in the main hall.",
         "fees": "Fee reminder",
         "feesText": "Dear parent, a reminder that this month's school fees are due on the 10th. You can pay online through the parent portal."
-      }
+      },
+      "tooLong": "Too long: an SMS can use at most {max} parts. Shorten the message.",
+      "unicode": "Sinhala/Tamil text: {per} characters per SMS",
+      "noPhone": "{count, plural, one {# without a phone number} other {# without phone numbers}}",
+      "noEmail": "{count, plural, one {# without an email address} other {# without email addresses}}"
     },
     "history": {
       "columns": {

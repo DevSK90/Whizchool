@@ -122,6 +122,9 @@ function getDb() {
   return db;
 }
 
+/** Contract tests pin "today" (POST /test/clock), as they do on the real API. */
+let todayOverride: string | null = null;
+
 // Simulated network latency so loading states show; skipped under unit tests.
 const delay = (ms: number) => (process.env.NODE_ENV === "test" ? Promise.resolve() : new Promise((r) => setTimeout(r, ms)));
 
@@ -130,7 +133,11 @@ export async function mockRequest<T>(method: HttpMethod, path: string, opts: Req
   const database = getDb();
   const query: Record<string, string> = {};
   for (const [k, v] of Object.entries(opts.query ?? {})) if (v !== undefined && v !== null && v !== "") query[k] = String(v);
-  const now = new Date();
+  if (method === "POST" && path === "/test/clock") {
+    todayOverride = ((opts.body as { today?: string | null })?.today ?? null) || null;
+    return { today: todayOverride } as T;
+  }
+  const now = todayOverride ? new Date(`${todayOverride}T09:30:00+05:30`) : new Date();
   const userId = sessionUserId();
   if (opts.idempotencyKey && idempotent.has(opts.idempotencyKey)) {
     return structuredClone(idempotent.get(opts.idempotencyKey)) as T;
@@ -149,6 +156,7 @@ export async function mockRequest<T>(method: HttpMethod, path: string, opts: Req
 
 /** Clears demo changes and the session, then reloads the page with fresh seed data. */
 export function resetMockData() {
+  todayOverride = null;
   try {
     storage()?.removeItem(JOURNAL_KEY);
   } catch {

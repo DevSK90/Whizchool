@@ -16,7 +16,20 @@ ${paragraphs.map((p) => `<tr><td style="font-size:15px;line-height:1.6;padding-b
   return { text, html };
 }
 
-export const inviteLinkPath = (token: string) => `/invite/${token}`;
+/** A school message (notice, circular) as an email: the text as typed, paragraphs kept. */
+export function messageEmail(to: string, schoolName: string, subject: string, body: string): Email {
+  const paragraphs = body.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
+  const text = [...paragraphs, "", schoolName].join("\n\n");
+  const html = `<!doctype html><html><body style="margin:0;background:#f4f5f9;font-family:Segoe UI,Arial,sans-serif;color:#1d2033">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr><td align="center" style="padding:32px 16px">
+<table role="presentation" width="100%" style="max-width:560px;background:#fff;border-radius:12px;padding:32px">
+<tr><td style="font-size:18px;font-weight:600;padding-bottom:16px">${escape(schoolName)}</td></tr>
+${paragraphs.map((p) => `<tr><td style="font-size:15px;line-height:1.6;padding-bottom:12px;white-space:pre-line">${escape(p)}</td></tr>`).join("")}
+</table></td></tr></table></body></html>`;
+  return { to, subject, text, html };
+}
+
+export const inviteLinkPath =(token: string) => `/invite/${token}`;
 export const resetLinkPath = (token: string) => `/reset-password?token=${encodeURIComponent(token)}`;
 
 export function inviteEmail(to: { name: string; email: string; kind: "staff" | "parent" }, schoolName: string, token: string): Email {

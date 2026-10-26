@@ -48,6 +48,15 @@ const schema = z.object({
    * (the demo UI shows them). Development and tests only; refused in production.
    */
   EXPOSE_DEV_LINKS: z.enum(["true", "false"]).optional(),
+  /**
+   * "notifylk" sends real SMS (production). "mailpit" delivers each SMS to Mailpit as an email so
+   * it can be read in development. "log" keeps them in memory (tests).
+   */
+  SMS_TRANSPORT: z.enum(["notifylk", "mailpit", "log"]).optional(),
+  NOTIFYLK_USER_ID: z.string().optional(),
+  NOTIFYLK_API_KEY: z.string().optional(),
+  /** "pgboss" runs jobs from a Postgres-backed queue; "inline" runs them in-process right away (tests). */
+  JOBS_MODE: z.enum(["pgboss", "inline"]).optional(),
   /** Where uploaded files are kept (local disk; S3-compatible storage arrives with deployment). */
   STORAGE_DIR: z.string().default("storage"),
   /** Signs short-lived file links. Required (32+ characters) in production. */
@@ -72,6 +81,8 @@ function load() {
     COOKIE_SECURE: env.COOKIE_SECURE ? env.COOKIE_SECURE === "true" : production,
     EMAIL_TRANSPORT: env.EMAIL_TRANSPORT ?? (production ? "resend" : env.NODE_ENV === "test" ? "log" : "smtp"),
     EXPOSE_DEV_LINKS: env.EXPOSE_DEV_LINKS ? env.EXPOSE_DEV_LINKS === "true" : !production,
+    SMS_TRANSPORT: env.SMS_TRANSPORT ?? (production ? "notifylk" : env.NODE_ENV === "test" ? "log" : "mailpit"),
+    JOBS_MODE: env.JOBS_MODE ?? (env.NODE_ENV === "test" ? "inline" : "pgboss"),
     // A fixed development secret keeps file links valid across restarts; production must set its own.
     FILE_URL_SECRET: env.FILE_URL_SECRET ?? (production ? "" : "whizchool-development-file-url-secret!"),
   };
@@ -83,6 +94,9 @@ function load() {
       !config.FILE_URL_SECRET && "FILE_URL_SECRET missing (file links can't be signed)",
     ].filter(Boolean);
     if (unsafe.length) throw new Error(`Unsafe production configuration: ${unsafe.join("; ")}.`);
+  }
+  if (config.SMS_TRANSPORT === "notifylk" && (!config.NOTIFYLK_USER_ID || !config.NOTIFYLK_API_KEY)) {
+    throw new Error("SMS_TRANSPORT=notifylk needs NOTIFYLK_USER_ID and NOTIFYLK_API_KEY.");
   }
   if (config.EMAIL_TRANSPORT === "resend" && !config.RESEND_API_KEY) {
     throw new Error("EMAIL_TRANSPORT=resend needs RESEND_API_KEY.");

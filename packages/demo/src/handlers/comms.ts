@@ -1,27 +1,26 @@
 import type { Route } from "../router";
-import type { AudienceType, MessageLog } from "@whizchool/shared/types";
+import { SMS_MAX_PARTS, smsLength } from "@whizchool/shared/sms";
+import type { AudienceType, MessageChannel, MessageLog } from "@whizchool/shared/types";
 import { audit, fail, isoNow, paginate, requireAuth, requirePerm, todayISO, type Ctx } from "../helpers";
 import { nextId, type DB } from "../db";
 import { defaulters } from "./fees";
 
-const SMS_SEGMENT = 160;
-
-function audienceCount(ctx: Ctx, type: AudienceType, ids: string[] = []) {
+/** Reachable people for an audience on a channel (primary guardians, once each), plus those without a phone/email. */
+function audienceCount(ctx: Ctx, type: AudienceType, ids: string[] = [], channel: MessageChannel = "sms") {
   const db = ctx.db;
-  const active = db.students.rows.filter((s) => s.status === "active");
-  const guardiansOf = (students: typeof active) => new Set(students.map((s) => s.guardianIds[0])).size;
-  switch (type) {
-    case "all_parents":
-      return guardiansOf(active);
-    case "grade":
-      return guardiansOf(active.filter((s) => ids.includes(s.gradeId)));
-    case "class":
-      return guardiansOf(active.filter((s) => ids.includes(s.classId)));
-    case "all_staff":
-      return db.staff.rows.filter((s) => s.status === "active").length;
-    case "defaulters":
-      return defaulters(db, todayISO(ctx)).length;
+  if (type === "all_staff") {
+    const staff = db.staff.rows.filter((s) => s.status === "active");
+    const reachable = staff.filter((s) => (channel === "sms" ? s.phone : s.email)).length;
+    return { count: reachable, unreachable: staff.length - reachable };
   }
+  const active = db.students.rows.filter((s) => s.status === "active");
+  const overdue = type === "defaulters" ? new Set(defaulters(db, todayISO(ctx)).map((d) => d.studentId)) : null;
+  const students = active.filter((s) =>
+    type === "grade" ? ids.includes(s.gradeId) : type === "class" ? ids.includes(s.classId) : overdue ? overdue.has(s.id) : true,
+  );
+  const guardians = [...new Set(students.map((s) => s.guardianIds[0]))].map((id) => db.guardians.get(id)).filter((g) => !!g);
+  const reachable = guardians.filter((g) => (channel === "sms" ? g.phone : g.email)).length;
+  return { count: reachable, unreachable: guardians.length - reachable };
 }
 
 function audienceLabel(db: DB, type: AudienceType, ids: string[] = []) {
@@ -37,6 +36,13 @@ function audienceLabel(db: DB, type: AudienceType, ids: string[] = []) {
     case "defaulters":
       return "Parents with overdue fees";
   }
+}
+
+function noticeErrors(title: unknown, body: unknown) {
+  const f: Record<string, string> = {};
+  if (typeof title !== "string" || !title.trim()) f.title = "Required";
+  if (typeof body !== "string" || !body.trim()) f.body = "Required";
+  if (Object.keys(f).length) fail(422, "validation", "Please fix the highlighted fields.", f);
 }
 
 /** The mock "queue" delivers messages a few seconds after they're created. */
@@ -72,7 +78,8 @@ export const commsRoutes: Route[] = [
       requirePerm(ctx, "messaging.create");
       const type = ctx.query.type as AudienceType;
       const ids = ctx.query.ids ? ctx.query.ids.split(",") : [];
-      return { count: audienceCount(ctx, type, ids), label: audienceLabel(ctx.db, type, ids) };
+      const channel = (ctx.query.channel === "email" ? "email" : "sms") as MessageChannel;
+      return { ...audienceCount(ctx, type, ids, channel), label: audienceLabel(ctx.db, type, ids) };
     },
   },
   {
@@ -82,14 +89,19 @@ export const commsRoutes: Route[] = [
       requirePerm(ctx, "messaging.create");
       const db = ctx.db;
       const { channel, audience, subject, body } = ctx.body ?? {};
-      if (channel !== "sms" && channel !== "email") fail(422, "validation", "Choose SMS or email.", { channel: "Required" });
-      if (!body?.trim()) fail(422, "validation", "Message is required.", { body: "Required" });
-      if (channel === "email" && !subject?.trim()) fail(422, "validation", "Subject is required for email.", { subject: "Required" });
-      if (channel === "sms" && body.length > SMS_SEGMENT * 3) fail(422, "validation", "SMS is too long (max 3 parts).", { body: "Max 480 characters" });
+      const f: Record<string, string> = {};
+      if (channel !== "sms" && channel !== "email") f.channel = "Choose SMS or email";
+      if (!body?.trim()) f.body = "Required";
+      if (channel === "email" && !subject?.trim()) f.subject = "Required";
+      if (channel === "sms" && body?.trim()) {
+        const len = smsLength(body.trim());
+        if (len.parts > SMS_MAX_PARTS) f.body = `Too long: ${len.parts} SMS parts (at most ${SMS_MAX_PARTS})`;
+      }
       const type = audience?.type as AudienceType;
       const ids = (audience?.ids ?? []) as string[];
-      if ((type === "grade" || type === "class") && !ids.length) fail(422, "validation", "Choose at least one grade or class.", { audience: "Required" });
-      const recipients = audienceCount(ctx, type, ids);
+      if ((type === "grade" || type === "class") && !ids.length) f.audience = "Required";
+      if (Object.keys(f).length) fail(422, "validation", "Please fix the highlighted fields.", f);
+      const recipients = audienceCount(ctx, type, ids, channel).count;
       if (!recipients) fail(422, "validation", "No recipients match this audience.");
       const m = db.messages.insert({
         id: nextId(db, "msg"), channel, kind: type === "defaulters" ? "fee_reminder" : "manual",
@@ -117,8 +129,7 @@ export const commsRoutes: Route[] = [
     handler: (ctx) => {
       requirePerm(ctx, "messaging.create");
       const { title, body, audience, pinned } = ctx.body ?? {};
-      if (!title?.trim()) fail(422, "validation", "Title is required.", { title: "Required" });
-      if (!body?.trim()) fail(422, "validation", "Notice text is required.", { body: "Required" });
+      noticeErrors(title, body);
       const n = ctx.db.notices.insert({
         id: nextId(ctx.db, "ntc"), title: title.trim(), body: body.trim(), audience: audience ?? "everyone",
         pinned: !!pinned, publishedAt: isoNow(ctx), author: ctx.session!.name,
@@ -134,8 +145,9 @@ export const commsRoutes: Route[] = [
       requirePerm(ctx, "messaging.create");
       const n = ctx.db.notices.get(ctx.params.id) ?? fail(404, "not_found", "Notice not found.");
       const { title, body, audience, pinned } = ctx.body ?? {};
-      if (!title?.trim() || !body?.trim()) fail(422, "validation", "Title and text are required.");
-      Object.assign(n, { title: title.trim(), body: body.trim(), audience, pinned: !!pinned });
+      noticeErrors(title, body);
+      Object.assign(n!, { title: title.trim(), body: body.trim(), audience: audience ?? "everyone", pinned: !!pinned });
+      audit(ctx, "notice.update", "Notice", `Edited notice “${n!.title}”`, n!.id);
       return n;
     },
   },

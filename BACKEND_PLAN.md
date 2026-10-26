@@ -150,14 +150,17 @@ Estimates are for one developer. Each phase ends with its contract tests passing
 | 1 Auth and access | Done (2026-10-24) | Sessions, invites, password reset/change, users, roles, audit log, data-scope helpers, rate limits, email (Mailpit/Resend) |
 | 2 School setup | Done (2026-10-24) | School profile, years and terms (saved and validated as a set), streams, subjects, grade bands, staff list, classes (default subjects, one class per class teacher, A/L stream required), class detail scoped to the classes a teacher teaches |
 | 3 People and admissions | Done (2026-10-25) | Students (list, profile, admit, edit, status), guardians (sibling matching by email, or phone plus name), real uploads (type from bytes, EXIF stripped, signed links), admissions pipeline and enrolment, CSV import with header matching, idempotency keys |
+| 4 Attendance and messaging | Done (2026-10-26) | Attendance summary, sheet and save (no future dates, weekends or dates outside the year); absence SMS only for today's register and only for newly absent students, withdrawn if corrected before sending; bulk SMS/email with reachable/unreachable counts and SMS part counting (Sinhala/Tamil at 67 characters a part, at most 3 parts); notices; pg-boss queue with a delivery outbox (claimed rows, retries, sweeper), nightly cleanup |
 
-**Contract coverage over HTTP:** `auth`, `admin`, `school`, `students`, `admissions`, `import`. The list lives in `apps/web/vitest.config.ts` (`API_CONTRACTS`); add each area's file as its phase lands.
+**Contract coverage over HTTP:** `auth`, `admin`, `school`, `students`, `admissions`, `import`, `comms`. The list lives in `apps/web/vitest.config.ts` (`API_CONTRACTS`); add each area's file as its phase lands. `academics` joins in Phase 5. Contract and API tests pin "today" to Friday 2026-10-23 (`POST /test/clock`), so date rules don't depend on the day the tests run.
 
 **Carried forward:**
 
-- **Email on the job queue (Phase 4).** Invites and resets send inline with 5-second SMTP timeouts; failures are logged to the EventLog but not retried yet.
-- **Idempotency keys.** In place (routes opt in with `idempotent: true`); payments use them in Phase 6. Expired keys need a cleanup job (Phase 4).
-- **Unattached uploads (Phase 4).** Files uploaded but never attached (an abandoned application) need a nightly cleanup job.
+- **Invites and resets aren't queued.** They still send inline (5-second SMTP timeout, failures logged to the EventLog), because a queued job would keep the secret link in the job table. The application confirmation email and every bulk message go through the queue.
+- **Notify.lk sender ID.** Real SMS needs the school's approved sender ID in School settings and `NOTIFYLK_USER_ID`/`NOTIFYLK_API_KEY` in the environment. Until then, production would send under an unapproved ID and Notify.lk refuses it (the deliveries show as failed).
+- **SMS sending hours.** Bulk SMS goes out as soon as it's sent. If the school wants quiet hours (e.g. nothing after 8 pm), the queue can hold messages until morning.
+- **Email retries.** Every email failure counts as retryable (3 tries per recipient, then failed). With Resend, a permanent refusal (bad address) should fail at once; sort this out when the Resend adapter gets a real domain.
+- **Idempotency keys.** In place (routes opt in with `idempotent: true`); payments use them in Phase 6. The nightly cleanup removes keys older than a day.
 - **Object storage (Phase 8).** Files are on local disk (`apps/api/storage`); production needs the S3/R2 adapter behind the same interface.
 - **Sibling discount.** No longer applied automatically when a guardian is matched; staff choose discounts. If the school wants it automatic, it should be a school setting.
 - **Production bootstrap (Phase 8).** Production can't use the demo seed, so it needs a one-off command that creates the school, the built-in roles and the first admin (who then receives an invite).

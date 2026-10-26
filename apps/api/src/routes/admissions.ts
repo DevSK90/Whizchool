@@ -12,6 +12,7 @@ import type { Prisma } from "../generated/prisma/client";
 import { listQuery, page, parseSort, skipTake } from "../http/list";
 import { limits } from "../http/rate-limit";
 import { defineRoute } from "../http/route";
+import { enqueue } from "../jobs";
 import { currentYearId, schoolName } from "../school";
 import { createStudent } from "../services/students";
 import { toFileRef } from "../storage";
@@ -171,7 +172,9 @@ export const admissionRoutes = [
           },
         });
       });
-      await sendEmail(applicationReceivedEmail({ name: body.guardian.name, email: body.guardian.email! }, await schoolName(), { refNo: app.refNo, studentName, gradeName: grade.name }));
+      // Through the queue, with retries: it carries no secrets, and a mail outage must not lose it.
+      const email = applicationReceivedEmail({ name: body.guardian.name, email: body.guardian.email! }, await schoolName(), { refNo: app.refNo, studentName, gradeName: grade.name });
+      await enqueue("email.send", { ...email });
       return { refNo: app.refNo, email: body.guardian.email! };
     },
   }),

@@ -108,10 +108,12 @@ export const attendanceRoutes: Route[] = [
       const previous = db.attendance.get(key);
       db.attendance.set(key, { markedBy: ctx.session!.name, markedAt: isoNow(ctx), exceptions });
 
-      // Only alert parents of students who are newly marked absent.
-      const newlyAbsent = Object.entries(exceptions).filter(
-        ([id, st]) => st === "absent" && previous?.exceptions[id] !== "absent",
-      ).length;
+      // Only alert parents of students who are newly marked absent, and only for today's register:
+      // correcting an old register must not text parents about a past absence.
+      const newlyAbsent =
+        date === todayISO(ctx)
+          ? Object.entries(exceptions).filter(([id, st]) => st === "absent" && previous?.exceptions[id] !== "absent").length
+          : 0;
       if (newlyAbsent > 0) {
         db.messages.insert({
           id: nextId(db, "msg"), channel: "sms", kind: "absence_alert",

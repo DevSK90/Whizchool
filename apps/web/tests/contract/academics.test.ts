@@ -1,7 +1,11 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import { call, expectStatus, get, login, resetData, type Json } from "./helpers";
+import { call, expectStatus, get, login, resetData, setToday, type Json } from "./helpers";
 
-beforeAll(() => resetData());
+// Friday 23 October 2026, the demo school's "today": absence alerts only go out for today's register.
+beforeAll(async () => {
+  await resetData();
+  await setToday("2026-10-23");
+});
 
 const EXAM = "exam_2026_3";
 

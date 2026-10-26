@@ -215,10 +215,10 @@ export const useMessages = (params: Params) =>
     // poll while anything is still being delivered
     refetchInterval: (q) => (q.state.data?.items.some((m) => m.status === "queued" || m.status === "sending") ? 2000 : false),
   });
-export const useAudience = (type: T.AudienceType, ids: string[]) =>
+export const useAudience = (type: T.AudienceType, ids: string[], channel: T.MessageChannel = "sms") =>
   useQuery({
-    queryKey: ["audience", type, ids],
-    queryFn: () => api.get<{ count: number; label: string }>("/messages/audience", { type, ids: ids.join(",") }),
+    queryKey: ["audience", type, ids, channel],
+    queryFn: () => api.get<{ count: number; label: string; unreachable?: number }>("/messages/audience", { type, ids: ids.join(","), channel }),
   });
 export const useNotices = () => useQuery({ queryKey: ["notices"], queryFn: () => api.get<T.Notice[]>("/notices") });
 

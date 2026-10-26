@@ -1,12 +1,14 @@
 import { config } from "../config";
 import type { RouteDef } from "../http/route";
 import { admissionRoutes } from "./admissions";
+import { attendanceRoutes } from "./attendance";
 import { auditLogRoutes } from "./audit-log";
 import { authRoutes } from "./auth";
 import { classRoutes } from "./classes";
 import { fileRoutes } from "./files";
 import { healthRoutes } from "./health";
 import { importRoutes } from "./imports";
+import { messageRoutes } from "./messages";
 import { publicRoutes } from "./public";
 import { roleRoutes } from "./roles";
 import { schoolRoutes } from "./school";
@@ -28,5 +30,7 @@ export const routes: RouteDef<any, any>[] = [
   ...fileRoutes,
   ...admissionRoutes,
   ...importRoutes,
+  ...attendanceRoutes,
+  ...messageRoutes,
   ...(config.ENABLE_TEST_ROUTES ? testSupportRoutes : []),
 ];

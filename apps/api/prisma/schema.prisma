@@ -939,16 +939,21 @@ model Message {
   createdAt     DateTime       @default(now()) @db.Timestamptz(3)
   createdById   String?
   createdBy     String
+  /// What triggered an automatic message, e.g. "attendance:<classId>:<date>" for absence alerts.
+  relatesTo     String?
 
   deliveries MessageDelivery[]
 
   @@index([createdAt])
+  @@index([relatesTo])
 }
 
 enum DeliveryStatus {
   queued
   sent
   failed
+  /// Withdrawn before sending (e.g. an absence corrected to present).
+  cancelled
 }
 
 /// One recipient of a message; retried by the job queue on provider errors.
@@ -956,12 +961,16 @@ model MessageDelivery {
   id         String         @id @default(uuid(7))
   messageId  String
   to         String
+  /// Personalised text for this recipient; the message body is used when empty.
+  body       String?
   studentId  String?
+  guardianId String?
   status     DeliveryStatus @default(queued)
   attempts   Int            @default(0)
   providerId String?
   error      String?
   sentAt     DateTime?      @db.Timestamptz(3)
+  lastAttemptAt DateTime?   @db.Timestamptz(3)
 
   message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
 

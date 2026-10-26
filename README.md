@@ -33,6 +33,8 @@ The web app talks to the in-browser demo API unless `apps/web/.env.local` sets `
 
 Demo accounts (password `demo1234`): `admin@`, `principal@`, `teacher@`, `accountant@` and `parent@whizchool.lk`.
 
+**Email and SMS in development.** Nothing leaves your machine. Emails and SMS both land in Mailpit (http://localhost:8025). An SMS shows up as an email to `<number>@sms.test`, with the part count and encoding in the subject. Messages go out through a background job queue (pg-boss, in the same Postgres), so a message shows "sending" for a moment before it shows "sent".
+
 ## Everyday commands
 
 | Command | Does |
