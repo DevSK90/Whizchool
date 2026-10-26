@@ -3,6 +3,7 @@ import type {
   ExamProgress,
   MarkSheet,
   MarkValue,
+  PromotionAction,
   PromotionPreview,
   PromotionRow,
   ReportCard,
@@ -97,8 +98,6 @@ function refreshExamStatus(db: DB, examId: string) {
   else if (exam.status === "released") exam.status = "review";
 }
 
-const NEXT_YEAR = "2027";
-
 export const examRoutes: Route[] = [
   {
     method: "GET",
@@ -118,6 +117,9 @@ export const examRoutes: Route[] = [
       const term = ctx.db.terms.get(termId) ?? fail(422, "validation", "Choose a term.", { termId: "Required" });
       if (!name?.trim()) fail(422, "validation", "Name is required.", { name: "Required" });
       if (!startDate || !endDate || startDate > endDate) fail(422, "validation", "Check the dates.", { endDate: "Must be after the start date" });
+      if (startDate < term.startDate || endDate > term.endDate) {
+        fail(422, "validation", "Please fix the highlighted fields.", { startDate: `Must be within ${term.name} (${term.startDate} to ${term.endDate})` });
+      }
       if (ctx.db.exams.rows.some((e) => e.termId === termId)) fail(409, "duplicate", "This term already has a term test.");
       const exam = ctx.db.exams.insert({
         id: nextId(ctx.db, "exam"), yearId: term.yearId, termId, name: name.trim(), termName: term.name, status: "scheduled", startDate, endDate,
@@ -217,8 +219,8 @@ export const examRoutes: Route[] = [
       const roster = new Set(sheetRoster(db, classId, subjectId).map((x) => x.id));
       const fields: Record<string, string> = {};
       for (const { studentId, mark } of marks as { studentId: string; mark: MarkValue }[]) {
-        if (!roster.has(studentId)) continue;
-        if (mark !== null && mark !== "AB" && !(Number.isInteger(mark) && mark >= 0 && mark <= 100)) fields[studentId] = "Enter 0–100 or AB";
+        if (!roster.has(studentId)) fields[studentId] = "Not on this mark sheet";
+        else if (mark !== null && mark !== "AB" && !(Number.isInteger(mark) && mark >= 0 && mark <= 100)) fields[studentId] = "Enter 0–100 or AB";
       }
       if (Object.keys(fields).length) fail(422, "validation", "Some marks are invalid.", fields);
       for (const { studentId, mark } of marks as { studentId: string; mark: MarkValue }[]) {
@@ -369,7 +371,6 @@ export const examRoutes: Route[] = [
       if (missing && !ctx.body?.force) fail(409, "missing_remarks", `${missing} student${missing === 1 ? " has" : "s have"} no class-teacher remark yet.`);
       db.reportStatus.set(`${examId}|${classId}`, "approved");
       const exam = getExam(db, examId);
-      if (exam.status === "marks_entry") exam.status = "review";
       audit(ctx, "reportCards.approve", "Report cards", `Approved ${exam.name} report cards for ${db.classes.get(classId)?.name}`);
       return { status: "approved" };
     },
@@ -418,38 +419,47 @@ export const examRoutes: Route[] = [
     handler: (ctx): PromotionPreview => {
       requirePerm(ctx, "promotions.view");
       const db = ctx.db;
-      const year = db.years.get(db.school.currentYearId)!;
-      const classes = currentClasses(db);
-      const done = db.years.rows.find((y) => y.name === NEXT_YEAR);
-      const finalExam = [...db.exams.rows].filter((e) => e.yearId === year.id && reportStatus(db, e.id, classes[0].id) !== "pending_marks").pop();
+      const { year, targets, students, plan, gradeOf } = planContext(db);
+      // Averages from each class's most recent approved term test this year.
       const averages = new Map<string, number>();
-      if (finalExam) for (const c of classes) for (const r of classResults(db, finalExam.id, c.id).rows) averages.set(r.student.id, r.average);
-      const targetFor = (classId: string) => {
-        const c = db.classes.get(classId)!;
-        const g = db.grades.get(c.gradeId)!.number;
-        if (g === 13) return undefined;
-        if (g === 11) return undefined; // A/L stream must be chosen
-        return `next_${g + 1}${c.section.toLowerCase()}`;
-      };
-      const rows: PromotionRow[] = classes.flatMap((c) =>
-        classRoster(db, c.id).map((s) => {
-          const g = db.grades.get(c.gradeId)!.number;
-          return {
-            studentId: s.id, admissionNo: s.admissionNo, fullName: fullName(s), fromClassId: c.id, fromClassName: c.name,
-            average: averages.get(s.id), action: g === 13 ? "graduate" : "promote", toClassId: targetFor(c.id),
-          };
-        }),
-      );
-      // Next year's classes mirror this year's structure.
-      const targetClasses = classes
-        .map((c) => {
-          const g = db.grades.get(c.gradeId)!.number;
-          return { id: `next_${g}${c.section.toLowerCase()}`, name: c.name, gradeNumber: g };
-        })
-        .sort((a, b) => a.gradeNumber - b.gradeNumber || a.name.localeCompare(b.name));
+      for (const c of currentClasses(db)) {
+        const exam = db.exams.rows.filter((e) => e.yearId === year.id && ["approved", "released"].includes(reportStatus(db, e.id, c.id))).pop();
+        if (exam) for (const r of classResults(db, exam.id, c.id).rows) averages.set(r.student.id, r.average);
+      }
+      const planned = new Map<string, { action: PromotionAction; toClassId?: string }>();
+      if (plan) {
+        const onRoll = new Set(students.map((s) => s.id));
+        for (const e of db.enrollments.rows.filter((x) => x.yearId === plan.toYearId && onRoll.has(x.studentId))) {
+          const s = db.students.get(e.studentId)!;
+          const to = db.classes.get(e.classId)!;
+          const g = gradeOf(to.gradeId);
+          planned.set(s.id, { action: g === gradeOf(s.gradeId) ? "repeat" : "promote", toClassId: targetId(g, to.name) });
+        }
+        for (const [id, action] of Object.entries(plan.decisions)) planned.set(id, { action });
+      }
+      const rows: PromotionRow[] = students.map((s) => {
+        const c = db.classes.get(s.classId)!;
+        const p = planned.get(s.id) ?? defaultPlan(gradeOf(c.gradeId), c.name);
+        const toClassId = p.toClassId && targets.has(p.toClassId) ? p.toClassId : undefined;
+        return {
+          studentId: s.id, admissionNo: s.admissionNo, fullName: fullName(s), fromClassId: c.id, fromClassName: c.name,
+          average: averages.get(s.id), action: p.action, toClassId,
+        };
+      });
+      const unplanned = plan ? students.filter((s) => !planned.has(s.id)).length : 0;
       return {
-        fromYear: year, toYearName: NEXT_YEAR, rows, targetClasses,
-        completed: done ? db.promotionSummary : undefined,
+        fromYear: year,
+        toYearName: plan ? db.years.get(plan.toYearId)!.name : nextYearName(year.name),
+        rows,
+        targetClasses: [...targets]
+          .map(([id, c]) => ({ id, name: c.name, gradeNumber: gradeOf(c.gradeId) }))
+          .sort((a, b) => a.gradeNumber - b.gradeNumber || a.name.localeCompare(b.name)),
+        completed: plan
+          ? {
+              at: plan.at, promoted: plan.promoted, repeated: plan.repeated, left: plan.left, graduated: plan.graduated,
+              toYearId: plan.toYearId, unplanned, startsFrom: year.endDate, canStart: todayISO(ctx) >= year.endDate && unplanned === 0,
+            }
+          : undefined,
       };
     },
   },
@@ -459,33 +469,135 @@ export const examRoutes: Route[] = [
     handler: (ctx) => {
       requirePerm(ctx, "promotions.approve");
       const db = ctx.db;
-      if (db.years.rows.some((y) => y.name === NEXT_YEAR)) fail(409, "already_done", `Promotion to ${NEXT_YEAR} has already been confirmed.`);
+      const { year, targets, students, plan, gradeOf } = planContext(db);
       const rows = (ctx.body?.rows ?? []) as PromotionRow[];
-      const missing = rows.filter((r) => (r.action === "promote" || r.action === "repeat") && !r.toClassId);
-      if (missing.length) fail(422, "validation", `${missing.length} student${missing.length === 1 ? "" : "s"} still need a target class.`);
-      const year = db.years.insert({ id: `year_${NEXT_YEAR}`, name: NEXT_YEAR, startDate: `${NEXT_YEAR}-01-05`, endDate: `${NEXT_YEAR}-12-03`, status: "upcoming" });
-      const created = new Map<string, string>();
+      const onRoll = new Map(students.map((s) => [s.id, s]));
+      const seen = new Set<string>();
+      const problems: string[] = [];
+      let needTarget = 0;
       for (const r of rows) {
-        if (!r.toClassId) continue;
-        if (!created.has(r.toClassId)) {
-          const [, rest] = r.toClassId.split("_");
-          const g = parseInt(rest, 10);
-          const section = rest.slice(String(g).length).toUpperCase();
-          const cls = db.classes.insert({ id: `cls_${NEXT_YEAR}_${rest}`, yearId: year.id, gradeId: `grade_${g}`, section, name: `${g}-${section}` });
-          created.set(r.toClassId, cls.id);
+        const s = onRoll.get(r.studentId);
+        if (!s || seen.has(r.studentId)) {
+          problems.push("The plan lists a student twice or one who isn't an active student this year.");
+          break;
         }
-        db.enrollments.insert({ id: nextId(db, "enr"), studentId: r.studentId, yearId: year.id, classId: created.get(r.toClassId)! });
+        seen.add(s.id);
+        const g = gradeOf(s.gradeId);
+        if (r.action === "graduate" && g !== 13) problems.push(`${fullName(s)}: only Grade 13 students can graduate.`);
+        if (r.action === "promote" && g === 13) problems.push(`${fullName(s)}: Grade 13 students graduate or leave.`);
+        if (r.action === "promote" || r.action === "repeat") {
+          const target = r.toClassId ? targets.get(r.toClassId) : undefined;
+          if (!target) needTarget++;
+          else if (gradeOf(target.gradeId) !== (r.action === "repeat" ? g : g + 1)) {
+            problems.push(`${fullName(s)}: ${r.action === "repeat" ? "repeats in" : "moves up to"} the wrong grade (${target.name}).`);
+          }
+        }
       }
-      const summary = {
-        at: isoNow(ctx),
-        promoted: rows.filter((r) => r.action === "promote").length,
-        repeated: rows.filter((r) => r.action === "repeat").length,
-        left: rows.filter((r) => r.action === "leave").length,
-        graduated: rows.filter((r) => r.action === "graduate").length,
+      if (problems.length) fail(422, "validation", problems.slice(0, 3).join(" "));
+      if (needTarget) fail(422, "validation", `${needTarget} student${needTarget === 1 ? "" : "s"} still need a target class.`);
+      const missing = students.length - seen.size;
+      if (missing) fail(422, "validation", `${missing} student${missing === 1 ? " isn't" : "s aren't"} in the plan. Reload the page and try again.`);
+
+      const nextName = plan ? db.years.get(plan.toYearId)!.name : nextYearName(year.name);
+      let next = db.years.rows.find((y) => y.name === nextName);
+      if (next && next.status !== "upcoming") fail(409, "already_done", `The ${nextName} school year has already started.`);
+      next ??= db.years.insert({ id: `year_${nextName}`, name: nextName, startDate: nextYearIso(year.startDate), endDate: nextYearIso(year.endDate), status: "upcoming" });
+      const nextYear = next;
+      if (!db.terms.rows.some((t) => t.yearId === nextYear.id)) {
+        for (const t of db.terms.rows.filter((x) => x.yearId === year.id)) {
+          db.terms.insert({ ...t, id: `term_${nextName}_${t.number}`, yearId: nextYear.id, startDate: nextYearIso(t.startDate), endDate: nextYearIso(t.endDate) });
+        }
+      }
+      // Next year mirrors this year's classes, teachers and subjects included.
+      const classFor = new Map<string, string>();
+      for (const [id, c] of targets) {
+        let cls = db.classes.rows.find((x) => x.yearId === nextYear.id && x.name === c.name);
+        if (!cls) {
+          cls = db.classes.insert({ ...c, id: `cls_${nextName}_${id.slice("next_".length)}`, yearId: nextYear.id });
+          for (const cs of db.classSubjects.rows.filter((x) => x.classId === c.id)) {
+            db.classSubjects.insert({ id: nextId(db, "cs"), classId: cls.id, subjectId: cs.subjectId, teacherId: cs.teacherId });
+          }
+        }
+        classFor.set(id, cls.id);
+      }
+      for (const e of db.enrollments.rows.filter((x) => x.yearId === nextYear.id && seen.has(x.studentId))) db.enrollments.remove(e.id);
+      for (const r of rows) {
+        if (r.action === "promote" || r.action === "repeat") {
+          db.enrollments.insert({ id: nextId(db, "enr"), studentId: r.studentId, yearId: nextYear.id, classId: classFor.get(r.toClassId!)! });
+        }
+      }
+      const count = (a: PromotionAction) => rows.filter((r) => r.action === a).length;
+      const summary = { at: isoNow(ctx), promoted: count("promote"), repeated: count("repeat"), left: count("leave"), graduated: count("graduate") };
+      db.promotionPlan = {
+        fromYearId: year.id,
+        toYearId: nextYear.id,
+        ...summary,
+        decisions: Object.fromEntries(
+          rows.filter((r) => r.action === "leave" || r.action === "graduate").map((r) => [r.studentId, r.action as "leave" | "graduate"]),
+        ),
       };
-      db.promotionSummary = summary;
-      audit(ctx, "promotions.confirm", "Promotions", `Confirmed ${NEXT_YEAR} promotions: ${summary.promoted} promoted, ${summary.repeated} repeating, ${summary.graduated} graduating, ${summary.left} leaving`);
+      audit(ctx, "promotions.confirm", "Promotions", `${plan ? "Revised" : "Confirmed"} ${nextName} promotions: ${summary.promoted} promoted, ${summary.repeated} repeating, ${summary.graduated} graduating, ${summary.left} leaving`);
       return summary;
     },
   },
+  {
+    method: "POST",
+    path: "/promotions/start",
+    handler: (ctx) => {
+      requirePerm(ctx, "promotions.approve");
+      const db = ctx.db;
+      const { year, students, plan } = planContext(db);
+      if (!plan) return fail(409, "invalid_transition", "Confirm the promotions first.");
+      const next = db.years.get(plan.toYearId)!;
+      if (todayISO(ctx) < year.endDate) fail(409, "too_early", `The ${year.name} school year runs until ${year.endDate}. Start ${next.name} after that.`);
+      const enrolments = new Map(db.enrollments.rows.filter((e) => e.yearId === next.id).map((e) => [e.studentId, e]));
+      const unplanned = students.filter((s) => !enrolments.has(s.id) && !plan.decisions[s.id]).length;
+      if (unplanned) {
+        fail(409, "unplanned", `${unplanned} student${unplanned === 1 ? " was" : "s were"} admitted after the promotions were confirmed. Review the promotions and confirm them again.`);
+      }
+      let moved = 0;
+      let left = 0;
+      let graduated = 0;
+      for (const s of students) {
+        const e = enrolments.get(s.id);
+        if (e) {
+          s.classId = e.classId;
+          s.gradeId = db.classes.get(e.classId)!.gradeId;
+          moved++;
+        } else {
+          const graduating = plan.decisions[s.id] === "graduate";
+          Object.assign(s, { status: graduating ? "graduated" : "left", leftDate: year.endDate, leftReason: `End of the ${year.name} school year` });
+          if (graduating) graduated++;
+          else left++;
+        }
+      }
+      year.status = "closed";
+      next.status = "active";
+      db.school.currentYearId = next.id;
+      db.promotionPlan = undefined;
+      audit(ctx, "year.start", "Academic year", `Started the ${next.name} school year: ${moved} students in their new classes, ${graduated} graduated, ${left} left`, next.id);
+      return { year: next.name, moved, left, graduated };
+    },
+  },
 ];
+
+/** Next year's classes are referred to as "next_<grade><section>" until they exist (the web app builds the same ids). */
+const targetId = (grade: number, className: string) => `next_${grade}${(className.split("-")[1] ?? className).toLowerCase()}`;
+const nextYearName = (name: string) => String(Number(name) + 1);
+const nextYearIso = (iso: string) => `${Number(iso.slice(0, 4)) + 1}${iso.slice(4)}`;
+
+function defaultPlan(grade: number, className: string): { action: PromotionAction; toClassId?: string } {
+  if (grade === 13) return { action: "graduate" };
+  if (grade === 11) return { action: "promote" }; // the A/L stream must be chosen
+  return { action: "promote", toClassId: targetId(grade + 1, className) };
+}
+
+function planContext(db: DB) {
+  const year = db.years.get(db.school.currentYearId)!;
+  const gradeOf = (gradeId: string) => db.grades.get(gradeId)!.number;
+  const classes = [...currentClasses(db)].sort((a, b) => gradeOf(a.gradeId) - gradeOf(b.gradeId) || a.name.localeCompare(b.name));
+  const targets = new Map(classes.map((c) => [targetId(gradeOf(c.gradeId), c.name), c]));
+  const students = classes.flatMap((c) => classRoster(db, c.id));
+  const plan = db.promotionPlan?.fromYearId === year.id ? db.promotionPlan : undefined;
+  return { year, targets, students, plan, gradeOf };
+}

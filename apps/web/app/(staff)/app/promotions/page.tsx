@@ -27,25 +27,58 @@ function gradeOf(className: string) {
 
 export default function PromotionsPage() {
   const t = useTranslations("academics.promotions");
+  const can = useCan();
   const { data, error, refetch, isPending } = usePromotionPreview();
+  const [reviewing, setReviewing] = useState(false);
+  const start = useApiMutation(() => api.post("/promotions/start"), {
+    // A new year changes nearly every screen.
+    invalidate: [["promotions"], ["years"], ["terms"], ["school"], ["classes"], ["students"], ["exams"], ["dashboard"], ["attendance"], ["auth"]],
+    success: t("started", { year: data?.toYearName ?? "" }),
+  });
   if (isPending) return <PageSkeleton />;
   if (error) return <ErrorState error={error} onRetry={refetch} />;
-  if (data.completed) {
+  const done = data.completed;
+  if (done && !reviewing) {
     return (
       <>
-        <PageHeader title={t("title")} />
+        <PageHeader
+          title={t("title")}
+          actions={
+            can("promotions.approve") && (
+              <>
+                <Button variant="outline" onClick={() => setReviewing(true)}>
+                  {t("review")}
+                </Button>
+                <ConfirmDialog
+                  trigger={<Button disabled={!done.canStart}>{t("startYear", { year: data.toYearName })}</Button>}
+                  title={t("startTitle", { year: data.toYearName })}
+                  description={t("startBody", { year: data.toYearName, from: data.fromYear.name })}
+                  confirmLabel={t("startYear", { year: data.toYearName })}
+                  onConfirm={() => start.mutateAsync(undefined)}
+                />
+              </>
+            )
+          }
+        />
         <Alert>
           <CheckCircle2 />
           <AlertTitle>{t("completedTitle", { year: data.toYearName })}</AlertTitle>
-          <AlertDescription>{t("completedBody", { ...data.completed, date: formatDate(data.completed.at) })}</AlertDescription>
+          <AlertDescription>
+            <p>{t("completedBody", { promoted: done.promoted, repeated: done.repeated, graduated: done.graduated, left: done.left, date: formatDate(done.at) })}</p>
+            {done.unplanned ? (
+              <p>{t("unplanned", { count: done.unplanned })}</p>
+            ) : (
+              !done.canStart && done.startsFrom && <p>{t("startsFrom", { year: data.toYearName, date: formatDate(done.startsFrom) })}</p>
+            )}
+          </AlertDescription>
         </Alert>
       </>
     );
   }
-  return <PromotionEditor data={data} />;
+  return <PromotionEditor data={data} onDone={() => setReviewing(false)} />;
 }
 
-function PromotionEditor({ data }: { data: PromotionPreview }) {
+function PromotionEditor({ data, onDone }: { data: PromotionPreview; onDone: () => void }) {
   const t = useTranslations("academics.promotions");
   const ta = useTranslations("status.promotion");
   const tc = useTranslations("common");
@@ -81,6 +114,7 @@ function PromotionEditor({ data }: { data: PromotionPreview }) {
   const confirm = useApiMutation(() => api.post("/promotions/confirm", { rows }), {
     invalidate: [["promotions"], ["years"]],
     success: t("done", { year: data.toYearName }),
+    onSuccess: onDone,
   });
 
   const targetOptions = (r: PromotionRow) => {

@@ -215,11 +215,18 @@
     "chooseClass": "Choose class",
     "confirm": "Confirm promotions",
     "confirmTitle": "Confirm promotions to {year}?",
-    "confirmBody": "Creates {year} classes and enrollments. The {year} year starts as \"upcoming\" and becomes active on its start date.",
+    "confirmBody": "Saves the plan and sets up {year}: classes (with this year's teachers and subjects), terms a year on, and enrolments. Students stay in their current classes until you start the {year} school year.",
     "done": "Promotions to {year} confirmed.",
-    "completedTitle": "Promotions to {year} are done",
+    "completedTitle": "Promotions to {year} are confirmed",
     "completedBody": "Confirmed on {date}: {promoted} promoted, {repeated} repeating, {graduated} graduated, {left} leaving.",
     "bulk": "Set {count} selected to",
-    "lowAverage": "Below 35"
+    "lowAverage": "Below 35",
+    "review": "Review promotions",
+    "startYear": "Start the {year} school year",
+    "startTitle": "Start the {year} school year?",
+    "startBody": "Students move into their {year} classes, leavers and graduates are marked as such, and {year} becomes the current year. {from} is closed. This can't be undone.",
+    "started": "The {year} school year has started.",
+    "startsFrom": "You can start {year} from {date}, the last day of this school year.",
+    "unplanned": "{count, plural, one {# student was} other {# students were}} admitted after the promotions were confirmed. Review the promotions and confirm them again before starting the new year."
   }
 }

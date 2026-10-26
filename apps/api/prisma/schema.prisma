@@ -127,6 +127,7 @@ model ClassSection {
   attendance   AttendanceDay[]
   markSheets   MarkSheet[]
   classReports ClassReport[]
+  reportCards  ReportCard[]
 
   @@unique([yearId, name])
   @@index([classTeacherId])
@@ -671,9 +672,14 @@ model ReportCard {
   average            Decimal? @db.Decimal(5, 2)
   rank               Int?
   classSize          Int?
+  /// Frozen at approval, so released results never change: the class the card was issued in and
+  /// each subject's mark, grade letter (under the bands of the day) and class average.
+  classId            String?
+  subjects           Json?
 
-  exam    Exam    @relation(fields: [examId], references: [id], onDelete: Cascade)
-  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  exam    Exam          @relation(fields: [examId], references: [id], onDelete: Cascade)
+  student Student       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  class   ClassSection? @relation(fields: [classId], references: [id])
 
   @@unique([examId, studentId])
 }
@@ -688,9 +694,16 @@ model PromotionRun {
   graduated  Int
   at         DateTime @default(now()) @db.Timestamptz(3)
   byId       String?
+  /// Students leaving or graduating at the year end: { [studentId]: "leave" | "graduate" }.
+  /// Promoted and repeating students have an Enrollment in the new year instead.
+  decisions  Json     @default("{}")
+  /// When the new year was started (students moved into their new classes). Until then the plan can be revised.
+  startedAt  DateTime? @db.Timestamptz(3)
 
   fromYear AcademicYear @relation("PromotionFrom", fields: [fromYearId], references: [id])
   toYear   AcademicYear @relation("PromotionTo", fields: [toYearId], references: [id])
+
+  @@unique([fromYearId])
 }
 
 // ───────────────────────────── Fees ─────────────────────────────

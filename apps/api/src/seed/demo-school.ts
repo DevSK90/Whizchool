@@ -4,6 +4,7 @@ import { createHash } from "node:crypto";
 import { hash } from "@node-rs/argon2";
 import { createSeed } from "@whizchool/demo/seed";
 import type { Db } from "../db";
+import { snapshotClass } from "../services/results";
 
 const day = (iso: string) => new Date(`${iso.slice(0, 10)}T00:00:00Z`);
 const at = (iso: string) => new Date(iso);
@@ -219,6 +220,11 @@ export async function seedDemoSchool(db: Db) {
       return { examId, studentId, classTeacherRemark: r.classTeacher ?? null, principalRemark: r.principal ?? null };
     }),
   );
+  // Approved and released report cards carry their frozen results, as approval would have left them.
+  for (const key of demo.reportStatus.keys()) {
+    const [examId, classId] = key.split("|");
+    await snapshotClass(db, examId!, classId!);
+  }
 
   // ── Fees ──
   await insert(db.feeStructure, demo.feeStructures.rows);

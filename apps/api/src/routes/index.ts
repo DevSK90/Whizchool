@@ -5,11 +5,15 @@ import { attendanceRoutes } from "./attendance";
 import { auditLogRoutes } from "./audit-log";
 import { authRoutes } from "./auth";
 import { classRoutes } from "./classes";
+import { examRoutes } from "./exams";
 import { fileRoutes } from "./files";
 import { healthRoutes } from "./health";
 import { importRoutes } from "./imports";
 import { messageRoutes } from "./messages";
+import { promotionRoutes } from "./promotions";
 import { publicRoutes } from "./public";
+import { reportCardRoutes } from "./report-cards";
+import { resultRoutes } from "./results";
 import { roleRoutes } from "./roles";
 import { schoolRoutes } from "./school";
 import { studentRoutes } from "./students";
@@ -32,5 +36,9 @@ export const routes: RouteDef<any, any>[] = [
   ...importRoutes,
   ...attendanceRoutes,
   ...messageRoutes,
+  ...examRoutes,
+  ...reportCardRoutes,
+  ...resultRoutes,
+  ...promotionRoutes,
   ...(config.ENABLE_TEST_ROUTES ? testSupportRoutes : []),
 ];

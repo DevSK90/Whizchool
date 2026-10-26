@@ -139,7 +139,17 @@ export interface DB {
   files: Table<MockFile>;
   studentDocuments: Table<MockStudentDocument>;
   counters: Record<string, number>;
-  promotionSummary?: { at: string; promoted: number; repeated: number; left: number; graduated: number };
+  /** The confirmed year-end plan for the current year; promoted/repeating students also have an enrollment in toYearId. */
+  promotionPlan?: {
+    fromYearId: string;
+    toYearId: string;
+    at: string;
+    promoted: number;
+    repeated: number;
+    left: number;
+    graduated: number;
+    decisions: Record<string, "leave" | "graduate">;
+  };
 }
 
 export function nextId(db: DB, prefix: string) {

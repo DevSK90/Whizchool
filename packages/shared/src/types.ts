@@ -491,6 +491,13 @@ export interface PromotionSummary {
   repeated: number;
   left: number;
   graduated: number;
+  /** The year the plan moves students into; it stays "upcoming" until it is started. */
+  toYearId?: ID;
+  /** Active students the plan doesn't cover (admitted after it was confirmed). */
+  unplanned?: number;
+  /** The new year can be started from this day (the current year's last day). */
+  startsFrom?: DateString;
+  canStart?: boolean;
 }
 
 export interface ReportCardOverviewRow {
