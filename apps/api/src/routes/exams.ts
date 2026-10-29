@@ -6,6 +6,7 @@ import type { AuthContext } from "../auth/context";
 import { hasFullScope } from "../auth/scope";
 import { fromIsoDate, isoDate, toIsoDate } from "../dates";
 import { prisma } from "../db";
+import { Prisma } from "../generated/prisma/client";
 import { defineRoute } from "../http/route";
 import { currentYearId } from "../school";
 import { examInclude, markValue, reportStatus, sitsSubject, toExam } from "../services/results";
@@ -110,38 +111,27 @@ export const examRoutes = [
     handler: async ({ auth, params }): Promise<ExamProgress> => {
       const exam = await loadExam(params.id);
       const full = hasFullScope(auth, "marks.view");
-      const classSubjects = await prisma.classSubject.findMany({
-        where: { class: { yearId: exam.yearId }, ...(full ? {} : { id: { in: auth.session.classSubjectIds } }) },
-        include: {
-          class: { select: { name: true, grade: { select: { number: true, level: true } } } },
-          subject: { select: { name: true, basket: true } },
-          teacher: { select: { name: true } },
-        },
-      });
-      const classIds = [...new Set(classSubjects.map((cs) => cs.classId))];
-      const [students, marks, sheets] = await Promise.all([
-        prisma.student.findMany({ where: { classId: { in: classIds }, status: "active" }, select: { id: true, classId: true, subjects: { select: { subjectId: true } } } }),
-        prisma.mark.findMany({ where: { examId: exam.id, student: { classId: { in: classIds }, status: "active" } }, select: { studentId: true, subjectId: true } }),
-        prisma.markSheet.findMany({ where: { examId: exam.id, classId: { in: classIds }, submittedAt: { not: null } }, select: { classId: true, subjectId: true } }),
-      ]);
-      const entered = new Set(marks.map((m) => `${m.studentId}|${m.subjectId}`));
-      const submitted = new Set(sheets.map((s) => `${s.classId}|${s.subjectId}`));
-      const sheetsOut = classSubjects.map((cs) => {
-        const roster = students.filter(
-          (s) => s.classId === cs.classId && sitsSubject(cs.class.grade.level, cs.subject.basket, cs.subjectId, new Set(s.subjects.map((x) => x.subjectId))),
-        );
-        return {
-          classId: cs.classId,
-          className: cs.class.name,
-          gradeNumber: cs.class.grade.number,
-          subjectId: cs.subjectId,
-          subjectName: cs.subject.name,
-          ...(cs.teacher ? { teacherName: cs.teacher.name } : {}),
-          entered: roster.filter((s) => entered.has(`${s.id}|${cs.subjectId}`)).length,
-          total: roster.length,
-          submitted: submitted.has(`${cs.classId}|${cs.subjectId}`),
-        };
-      });
+      // Counted in the database: a large school has ~500 sheets and ~10,000 marks per exam. Who sits a
+      // subject follows sitsSubject (O/L basket subjects only for the students who chose them).
+      const rows = await prisma.$queryRaw<
+        { classId: string; className: string; gradeNumber: number; subjectId: string; subjectName: string; teacherName: string | null; entered: number; total: number; submitted: boolean }[]
+      >`
+        SELECT cs."classId", c."name" AS "className", g."number" AS "gradeNumber", cs."subjectId", sub."name" AS "subjectName",
+               t."name" AS "teacherName", count(m."studentId")::int AS "entered", count(s."id")::int AS "total",
+               EXISTS (SELECT 1 FROM "MarkSheet" ms WHERE ms."examId" = ${exam.id} AND ms."classId" = cs."classId"
+                       AND ms."subjectId" = cs."subjectId" AND ms."submittedAt" IS NOT NULL) AS "submitted"
+        FROM "ClassSubject" cs
+        JOIN "Class" c ON c."id" = cs."classId"
+        JOIN "Grade" g ON g."id" = c."gradeId"
+        JOIN "Subject" sub ON sub."id" = cs."subjectId"
+        LEFT JOIN "Staff" t ON t."id" = cs."teacherId"
+        LEFT JOIN "Student" s ON s."classId" = cs."classId" AND s."status" = 'active'
+          AND (g."level" <> 'ol' OR sub."basket" IS NULL
+               OR EXISTS (SELECT 1 FROM "StudentSubject" ss WHERE ss."studentId" = s."id" AND ss."subjectId" = cs."subjectId"))
+        LEFT JOIN "Mark" m ON m."examId" = ${exam.id} AND m."studentId" = s."id" AND m."subjectId" = cs."subjectId"
+        WHERE c."yearId" = ${exam.yearId} ${full ? Prisma.empty : Prisma.sql`AND cs."id" IN (${Prisma.join([...auth.session.classSubjectIds, ""])})`}
+        GROUP BY cs."id", c."name", g."number", sub."name", t."name"`;
+      const sheetsOut = rows.map(({ teacherName, ...r }) => ({ ...r, ...(teacherName ? { teacherName } : {}) }));
       sheetsOut.sort((a, b) => a.gradeNumber - b.gradeNumber || a.className.localeCompare(b.className) || a.subjectName.localeCompare(b.subjectName));
       return { exam: toExam(exam), sheets: sheetsOut };
     },

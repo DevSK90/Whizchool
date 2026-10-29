@@ -5,6 +5,7 @@ import { attendanceRoutes } from "./attendance";
 import { auditLogRoutes } from "./audit-log";
 import { authRoutes } from "./auth";
 import { classRoutes } from "./classes";
+import { dashboardRoutes } from "./dashboard";
 import { examRoutes } from "./exams";
 import { feeRoutes } from "./fees";
 import { fileRoutes } from "./files";
@@ -44,5 +45,6 @@ export const routes: RouteDef<any, any>[] = [
   ...promotionRoutes,
   ...feeRoutes,
   ...payhereRoutes,
+  ...dashboardRoutes,
   ...(config.ENABLE_TEST_ROUTES ? testSupportRoutes : []),
 ];

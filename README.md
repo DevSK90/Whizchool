@@ -49,5 +49,6 @@ Demo accounts (password `demo1234`): `admin@`, `principal@`, `teacher@`, `accoun
 | `npm run test:e2e -w @whizchool/web` | Playwright E2E (always against the demo API, whatever `.env.local` says), using your installed Chrome |
 | `npm run db:reset` | Recreate the dev database from migrations, then `npm run db:seed` |
 | `npm run db:migrate` | Create/apply a migration after editing `apps/api/prisma/schema.prisma` |
+| `npm run perf -w @whizchool/api` | Times the busiest API calls at a 1,600-student school (needs `npm run db:up`; seeds its own `whizchool_perf` database the first time, a few minutes). `--strict` fails if a call's p95 is over 300 ms |
 
 CI (GitHub Actions) runs typecheck, lint, the web tests, the API tests against Postgres and the E2E suite on every push and pull request.

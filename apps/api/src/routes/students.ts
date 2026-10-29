@@ -179,6 +179,10 @@ async function listItem(auth: AuthContext, id: string) {
   return (await toStudentListItems(prisma, [row], { withBalance: auth.session.permissions.includes("fees.view") }))[0]!;
 }
 
+// The same order as String#localeCompare, without setting up a comparison for every call.
+const collator = new Intl.Collator();
+const numericCollator = new Intl.Collator(undefined, { numeric: true });
+
 // ── Routes ──
 
 export const studentRoutes = [
@@ -216,17 +220,20 @@ export const studentRoutes = [
       };
       const withBalance = auth.session.permissions.includes("fees.view");
       // Up to ~1,500 rows: sort in memory on light fields, then load full rows for one page.
-      const all = await prisma.student.findMany({
-        where,
-        select: { id: true, firstName: true, lastName: true, admissionNo: true, class: { select: { name: true } }, grade: { select: { number: true } } },
-      });
+      // Plain columns only: loading relations for every row costs several times more than the query.
+      const [students, classes] = await Promise.all([
+        prisma.student.findMany({ where, select: { id: true, firstName: true, lastName: true, admissionNo: true, classId: true } }),
+        prisma.classSection.findMany({ select: { id: true, name: true, grade: { select: { number: true } } } }),
+      ]);
+      const classOf = new Map(classes.map((c) => [c.id, c]));
+      const all = students.map((s) => ({ id: s.id, admissionNo: s.admissionNo, name: fullName(s), class: classOf.get(s.classId)! }));
       const { field, dir } = parseSort(query.sort, ["name", "admissionNo", "class", "balance"] as const, "class");
       const owed = field === "balance" && withBalance ? await balances(prisma, all.map((s) => s.id)) : null;
-      const byName = (a: (typeof all)[number], b: (typeof all)[number]) => fullName(a).localeCompare(fullName(b));
+      const byName = (a: (typeof all)[number], b: (typeof all)[number]) => collator.compare(a.name, b.name);
       const compare: Record<typeof field, (a: (typeof all)[number], b: (typeof all)[number]) => number> = {
         name: byName,
-        admissionNo: (a, b) => a.admissionNo.localeCompare(b.admissionNo, undefined, { numeric: true }),
-        class: (a, b) => a.grade.number - b.grade.number || a.class.name.localeCompare(b.class.name) || byName(a, b),
+        admissionNo: (a, b) => numericCollator.compare(a.admissionNo, b.admissionNo),
+        class: (a, b) => a.class.grade.number - b.class.grade.number || collator.compare(a.class.name, b.class.name) || byName(a, b),
         balance: (a, b) => (owed ? (owed.get(a.id) ?? 0) - (owed.get(b.id) ?? 0) : 0) || byName(a, b),
       };
       const sorted = all.sort((a, b) => (dir === "desc" ? -1 : 1) * compare[field](a, b));

@@ -178,7 +178,15 @@ function defaultRoles(): Role[] {
   ];
 }
 
-export function createSeed(): DB {
+/**
+ * "standard" is the demo school (about 650 students). "large" has four sections per grade below A/L and
+ * fuller classes, about 1,600 students, for checking the API's speed at a big school's size.
+ */
+export type SeedSize = "standard" | "large";
+
+export function createSeed(size: SeedSize = "standard"): DB {
+  const large = size === "large";
+  const sectionsBelowAL = large ? ["A", "B", "C", "D"] : ["A", "B"];
   const rng = createRng(20261023);
   const db: DB = {
     school: {
@@ -322,7 +330,7 @@ export function createSeed(): DB {
     }
   }
   const primaryTeachers: Staff[] = [];
-  for (let i = 0; i < 10; i++) {
+  for (let i = 0; i < sectionsBelowAL.length * 5; i++) {
     const { first, last } = teacherName(true);
     primaryTeachers.push(addStaff(rng.pick(["Mrs.", "Ms."]), first, last, "Teacher – Primary"));
   }
@@ -370,11 +378,11 @@ export function createSeed(): DB {
   };
 
   for (const grade of db.grades.rows) {
-    const sections = grade.level === "al" ? STREAMS.map(([code]) => code) : ["A", "B"];
+    const sections = grade.level === "al" ? STREAMS.map(([code]) => code) : sectionsBelowAL;
     sections.forEach((section, i) => {
       const c = makeClass("year_2026", grade, section, grade.level === "al" ? section : undefined);
       let classTeacher: Staff | undefined;
-      if (grade.level === "primary") classTeacher = primaryTeachers[(grade.number - 1) * 2 + i];
+      if (grade.level === "primary") classTeacher = primaryTeachers[(grade.number - 1) * sections.length + i];
       else if (grade.number === 10 && section === "A") classTeacher = kasun;
       else classTeacher = secondaryClassTeachers[ctIndex++ % secondaryClassTeachers.length];
       c.classTeacherId = classTeacher?.id;
@@ -391,7 +399,7 @@ export function createSeed(): DB {
       }
     });
     // 2025 classes for history (one grade lower last year)
-    if (grade.level !== "al") ["A", "B"].forEach((s) => makeClass("year_2025", grade, s));
+    if (grade.level !== "al") sectionsBelowAL.forEach((s) => makeClass("year_2025", grade, s));
     else STREAMS.forEach(([code]) => makeClass("year_2025", grade, code, code));
   }
 
@@ -493,7 +501,7 @@ export function createSeed(): DB {
 
   for (const cls of classes2026) {
     const grade = db.grades.get(cls.gradeId)!;
-    const target = grade.level === "al" ? rng.int(15, 20) : rng.int(22, 26);
+    const target = large ? (grade.level === "al" ? rng.int(20, 26) : rng.int(30, 34)) : grade.level === "al" ? rng.int(15, 20) : rng.int(22, 26);
     const existing = db.students.rows.filter((s) => s.classId === cls.id).length;
     for (let i = existing; i < target; i++) makeStudent(cls);
   }

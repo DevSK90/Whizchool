@@ -103,7 +103,7 @@ function toApplication(a: AppRow): Application & { gradeName: string } {
   };
 }
 
-const toListItem = (a: Prisma.ApplicationGetPayload<{ include: { applyingGrade: { select: { name: true } } } }>): ApplicationListItem => ({
+export const toApplicationListItem = (a: Prisma.ApplicationGetPayload<{ include: { applyingGrade: { select: { name: true } } } }>): ApplicationListItem => ({
   id: a.id,
   refNo: a.refNo,
   studentName: a.studentName,
@@ -254,7 +254,7 @@ export const admissionRoutes = [
         prisma.application.findMany({ where, orderBy, include: { applyingGrade: { select: { name: true } } }, ...skipTake(query) }),
         prisma.application.count({ where }),
       ]);
-      return page(rows.map(toListItem), total, query);
+      return page(rows.map(toApplicationListItem), total, query);
     },
   }),
   defineRoute({

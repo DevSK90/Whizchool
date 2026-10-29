@@ -35,7 +35,10 @@ export function toExam(e: Prisma.ExamGetPayload<{ include: typeof examInclude }>
   };
 }
 
-/** O/L students sit the core subjects plus their chosen basket electives; everyone else sits all the class's subjects. */
+/**
+ * O/L students sit the core subjects plus their chosen basket electives; everyone else sits all the class's subjects.
+ * GET /exams/:id/progress applies the same rule in SQL; change both together.
+ */
 export const sitsSubject = (level: string, basket: number | null, subjectId: string, electives: Set<string>) =>
   level !== "ol" || basket === null || electives.has(subjectId);
 

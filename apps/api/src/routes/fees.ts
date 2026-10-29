@@ -128,6 +128,48 @@ async function defaulters(today: string): Promise<Defaulter[]> {
     .sort((a, b) => b.balance - a.balance);
 }
 
+/** Collections this month and last, what's outstanding and overdue, the last ten months, and this month by method. */
+export async function feeTotals(today: string): Promise<Omit<FeesSummary, "defaulters">> {
+  const thisMonth = today.slice(0, 7);
+  const months: string[] = [thisMonth];
+  while (months.length < 10) {
+    const [y, m] = months[0]!.split("-").map(Number);
+    months.unshift(m === 1 ? `${y! - 1}-12` : `${y}-${String(m! - 1).padStart(2, "0")}`);
+  }
+  const from = monthStart(months[0]!);
+  const [collected, billed, [open]] = await Promise.all([
+    prisma.$queryRaw<{ month: string; method: PaymentMethod; amount: string }[]>`
+      SELECT to_char("paidAt" AT TIME ZONE 'Asia/Colombo', 'YYYY-MM') AS "month", "method", sum("amount")::text AS "amount"
+      FROM "Payment" WHERE "status" = 'completed' AND "paidAt" >= ${from}
+      GROUP BY 1, 2`,
+    prisma.$queryRaw<{ month: string; amount: string }[]>`
+      SELECT to_char("issueDate", 'YYYY-MM') AS "month", sum("total")::text AS "amount"
+      FROM "Invoice" WHERE "status" <> 'void' AND "issueDate" >= ${from}
+      GROUP BY 1`,
+    prisma.$queryRaw<{ amount: string | null; overdue: number }[]>`
+      SELECT sum("total" - "paid")::text AS "amount", (count(*) FILTER (WHERE "dueDate" < ${fromIsoDate(today)}))::int AS "overdue"
+      FROM "Invoice" WHERE "status" IN ('unpaid', 'partial')`,
+  ]);
+  const sum = (rows: { amount: string }[]) => rupees(rows.reduce((s, r) => s + cents(r.amount), 0));
+  const inMonth = (m: string) => collected.filter((r) => r.month === m);
+  return {
+    collectedThisMonth: sum(inMonth(thisMonth)),
+    collectedLastMonth: sum(inMonth(months[8]!)),
+    outstanding: rupees(cents(open?.amount)),
+    overdueInvoices: open?.overdue ?? 0,
+    monthly: months.map((m) => ({
+      month: m,
+      label: monthStart(m).toLocaleDateString("en-GB", { month: "short", timeZone: "UTC" }),
+      billed: sum(billed.filter((r) => r.month === m)),
+      collected: sum(inMonth(m)),
+    })),
+    byMethod: (["cash", "cheque", "bank_deposit", "payhere"] as const).map((method) => ({
+      method,
+      amount: sum(inMonth(thisMonth).filter((r) => r.method === method)),
+    })),
+  };
+}
+
 export const feeRoutes = [
   // ---------- Overview ----------
   defineRoute({
@@ -137,45 +179,8 @@ export const feeRoutes = [
     summary: "Collections this month and last, outstanding and overdue totals, the last ten months and this month by method",
     handler: async (): Promise<FeesSummary> => {
       const today = schoolToday();
-      const thisMonth = today.slice(0, 7);
-      const months: string[] = [thisMonth];
-      while (months.length < 10) {
-        const [y, m] = months[0]!.split("-").map(Number);
-        months.unshift(m === 1 ? `${y! - 1}-12` : `${y}-${String(m! - 1).padStart(2, "0")}`);
-      }
-      const from = monthStart(months[0]!);
-      const [collected, billed, open, defaulterRows] = await Promise.all([
-        prisma.$queryRaw<{ month: string; method: PaymentMethod; amount: string }[]>`
-          SELECT to_char("paidAt" AT TIME ZONE 'Asia/Colombo', 'YYYY-MM') AS "month", "method", sum("amount")::text AS "amount"
-          FROM "Payment" WHERE "status" = 'completed' AND "paidAt" >= ${from}
-          GROUP BY 1, 2`,
-        prisma.$queryRaw<{ month: string; amount: string }[]>`
-          SELECT to_char("issueDate", 'YYYY-MM') AS "month", sum("total")::text AS "amount"
-          FROM "Invoice" WHERE "status" <> 'void' AND "issueDate" >= ${from}
-          GROUP BY 1`,
-        prisma.invoice.findMany({ where: { status: { in: ["unpaid", "partial"] } }, select: { total: true, paid: true, dueDate: true } }),
-        defaulters(today),
-      ]);
-      const sum = (rows: { amount: string }[]) => rupees(rows.reduce((s, r) => s + cents(r.amount), 0));
-      const inMonth = (m: string) => collected.filter((r) => r.month === m);
-      const todayDate = fromIsoDate(today);
-      return {
-        collectedThisMonth: sum(inMonth(thisMonth)),
-        collectedLastMonth: sum(inMonth(months[8]!)),
-        outstanding: rupees(open.reduce((s, i) => s + cents(i.total) - cents(i.paid), 0)),
-        overdueInvoices: open.filter((i) => i.dueDate < todayDate).length,
-        defaulters: defaulterRows.length,
-        monthly: months.map((m) => ({
-          month: m,
-          label: monthStart(m).toLocaleDateString("en-GB", { month: "short", timeZone: "UTC" }),
-          billed: sum(billed.filter((r) => r.month === m)),
-          collected: sum(inMonth(m)),
-        })),
-        byMethod: (["cash", "cheque", "bank_deposit", "payhere"] as const).map((method) => ({
-          method,
-          amount: sum(inMonth(thisMonth).filter((r) => r.method === method)),
-        })),
-      };
+      const [totals, defaulterRows] = await Promise.all([feeTotals(today), defaulters(today)]);
+      return { ...totals, defaulters: defaulterRows.length };
     },
   }),
 
@@ -205,26 +210,16 @@ export const feeRoutes = [
         ],
       };
       const sort = parseSort(query.sort ?? "-issueDate", ["issueDate", "dueDate", "student", "total", "balance"] as const, "issueDate");
-      const total = await prisma.invoice.count({ where });
-      let rows;
-      if (sort.field === "balance") {
-        // Balance is computed, so sort the matching rows in memory and fetch just the page.
-        const all = await prisma.invoice.findMany({ where, select: { id: true, total: true, paid: true, status: true } });
-        const bal = (i: (typeof all)[number]) => (i.status === "void" ? 0 : cents(i.total) - cents(i.paid));
-        all.sort((a, b) => (sort.dir === "asc" ? bal(a) - bal(b) : bal(b) - bal(a)));
-        const { skip, take } = skipTake(query);
-        const ids = all.slice(skip, skip + take).map((i) => i.id);
-        const found = await prisma.invoice.findMany({ where: { id: { in: ids } }, include: invoiceInclude });
-        rows = ids.map((id) => found.find((f) => f.id === id)!);
-      } else {
-        const orderBy: Prisma.InvoiceOrderByWithRelationInput[] =
-          sort.field === "student"
-            ? [{ student: { firstName: sort.dir } }, { student: { lastName: sort.dir } }]
-            : sort.field === "issueDate"
-              ? [{ issueDate: sort.dir }, { number: sort.dir }]
-              : [{ [sort.field]: sort.dir }, { number: "asc" }];
-        rows = await prisma.invoice.findMany({ where, include: invoiceInclude, orderBy, ...skipTake(query) });
-      }
+      const orderBy: Prisma.InvoiceOrderByWithRelationInput[] =
+        sort.field === "student"
+          ? [{ student: { firstName: sort.dir } }, { student: { lastName: sort.dir } }]
+          : sort.field === "issueDate"
+            ? [{ issueDate: sort.dir }, { number: sort.dir }]
+            : [{ [sort.field]: sort.dir }, { number: "asc" }];
+      const [total, rows] = await Promise.all([
+        prisma.invoice.count({ where }),
+        prisma.invoice.findMany({ where, include: invoiceInclude, orderBy, ...skipTake(query) }),
+      ]);
       return page(rows.map((r) => toInvoiceListItem(r, today)), total, query);
     },
   }),

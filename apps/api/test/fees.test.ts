@@ -176,3 +176,22 @@ describe("monthly invoices", () => {
     expect((await generateMonthlyInvoices(prisma, period)).created).toBe(0);
   });
 });
+
+describe("invoice balances", () => {
+  // Last in the file, so the payments, reversals and voids above have all happened.
+  it("keep up with every payment, reversal and void, so lists can sort by what's owed", async () => {
+    const d = await debtor(6);
+    const accountant = await signIn("accountant@whizchool.lk");
+    expect((await accountant.post("/api/v1/payments").send({ studentId: d.studentId, amount: 100, method: "cash" })).status).toBe(200);
+    const [{ wrong }] = await prisma.$queryRaw<{ wrong: number }[]>`
+      SELECT count(*)::int AS "wrong" FROM "Invoice" WHERE "balance" <> CASE WHEN "status" = 'void' THEN 0 ELSE "total" - "paid" END`;
+    expect(wrong).toBe(0);
+    expect(await prisma.invoice.count({ where: { status: "void" } })).toBeGreaterThan(0);
+
+    const list = await accountant.get("/api/v1/invoices?sort=-balance&pageSize=50&status=all");
+    const balances: number[] = list.body.items.map((i: { balance: number }) => i.balance);
+    expect(balances).toEqual([...balances].sort((a, b) => b - a));
+    const top = await prisma.invoice.aggregate({ _max: { balance: true } });
+    expect(balances[0]).toBe(Number(top._max.balance));
+  });
+});

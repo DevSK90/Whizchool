@@ -2,7 +2,7 @@
 // Used by `npm run db:seed` and by the test-only reset route; never runs in production.
 import { createHash } from "node:crypto";
 import { hash } from "@node-rs/argon2";
-import { createSeed } from "@whizchool/demo/seed";
+import { createSeed, type SeedSize } from "@whizchool/demo/seed";
 import type { Db } from "../db";
 import { snapshotClass } from "../services/results";
 
@@ -23,9 +23,9 @@ async function wipe(db: Db) {
 }
 
 /** Wipes every table and loads the demo school. Returns a one-line summary. */
-export async function seedDemoSchool(db: Db) {
+export async function seedDemoSchool(db: Db, size: SeedSize = "standard") {
   const started = Date.now();
-  const demo = createSeed();
+  const demo = createSeed(size);
   await wipe(db);
 
   // ── Reference data ──

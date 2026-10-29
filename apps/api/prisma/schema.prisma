@@ -416,6 +416,7 @@ model Enrollment {
 
   @@unique([studentId, yearId])
   @@index([classId])
+  @@index([yearId])
 }
 
 /// O/L electives and A/L stream subjects chosen by a student.
@@ -637,6 +638,7 @@ model Mark {
 
   @@unique([examId, studentId, subjectId])
   @@index([examId, subjectId])
+  @@index([studentId])
 }
 
 enum ClassReportStatus {
@@ -682,6 +684,7 @@ model ReportCard {
   class   ClassSection? @relation(fields: [classId], references: [id])
 
   @@unique([examId, studentId])
+  @@index([studentId])
 }
 
 model PromotionRun {
@@ -788,6 +791,9 @@ model Invoice {
   dueDate    DateTime      @db.Date
   total      Decimal       @db.Decimal(12, 2)
   paid       Decimal       @default(0) @db.Decimal(12, 2)
+  /// What is still owed: total − paid, or 0 once void. Kept up to date by a database trigger (see the
+  /// invoice_balance migration), so code never writes it; it exists so lists can sort by it.
+  balance    Decimal       @default(0) @db.Decimal(12, 2)
   status     InvoiceStatus @default(unpaid)
   voidedAt   DateTime?     @db.Timestamptz(3)
   voidReason String?
@@ -812,6 +818,8 @@ model InvoiceLine {
 
   invoice Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
   feeType FeeType @relation(fields: [feeTypeId], references: [id])
+
+  @@index([invoiceId])
 }
 
 enum PaymentMethod {
@@ -861,6 +869,7 @@ model PaymentAllocation {
   invoice Invoice @relation(fields: [invoiceId], references: [id])
 
   @@index([invoiceId])
+  @@index([paymentId])
 }
 
 enum PayHereOrderStatus {
@@ -891,6 +900,7 @@ model PayHereOrder {
   invoices PayHereOrderInvoice[]
 
   @@index([status, expiresAt])
+  @@index([studentId])
 }
 
 model PayHereOrderInvoice {

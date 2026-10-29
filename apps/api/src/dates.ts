@@ -24,3 +24,12 @@ export function setSchoolToday(date: string | null) {
 export const schoolToday = (now = new Date()) => todayOverride ?? new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Colombo" }).format(now);
 
 export const addDays = (iso: string, days: number) => toIsoDate(new Date(fromIsoDate(iso).getTime() + days * 86_400_000));
+
+export const isWeekend = (iso: string) => [0, 6].includes(fromIsoDate(iso).getUTCDay());
+
+/** Today, or the most recent weekday when today is a weekend. */
+export function lastSchoolDay(today: string) {
+  let d = today;
+  while (isWeekend(d)) d = addDays(d, -1);
+  return d;
+}

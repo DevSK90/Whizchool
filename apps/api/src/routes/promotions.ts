@@ -65,11 +65,13 @@ export const promotionRoutes = [
       const { year, classes, targets, students, run } = await planContext();
       const byClass = new Map(classes.map((c) => [c.id, c]));
       // Averages from each student's most recent approved term test this year.
+      const exams = await prisma.exam.findMany({ where: { yearId: year.id }, select: { id: true }, orderBy: { startDate: "asc" } });
       const cards = await prisma.reportCard.findMany({
-        where: { studentId: { in: students.map((s) => s.id) }, exam: { yearId: year.id }, classId: { not: null } },
-        select: { studentId: true, average: true, exam: { select: { startDate: true } } },
-        orderBy: { exam: { startDate: "asc" } },
+        where: { examId: { in: exams.map((e) => e.id) }, classId: { not: null } },
+        select: { studentId: true, examId: true, average: true },
       });
+      const examOrder = new Map(exams.map((e, i) => [e.id, i]));
+      cards.sort((a, b) => examOrder.get(a.examId)! - examOrder.get(b.examId)!);
       const averages = new Map(cards.map((c) => [c.studentId, Number(c.average)]));
 
       const planned = new Map<string, { action: PromotionAction; toClassId?: string }>();

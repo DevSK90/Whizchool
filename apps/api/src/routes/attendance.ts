@@ -4,7 +4,7 @@ import type { AttendanceDaySummary, AttendanceSheet, AttendanceStatus } from "@w
 import { audit } from "../audit";
 import type { AuthContext } from "../auth/context";
 import { hasFullScope } from "../auth/scope";
-import { addDays, fromIsoDate, isoDate, schoolToday, toIsoDate } from "../dates";
+import { fromIsoDate, isoDate, isWeekend, lastSchoolDay, schoolToday, toIsoDate } from "../dates";
 import { prisma } from "../db";
 import { defineRoute } from "../http/route";
 import { enqueue } from "../jobs";
@@ -25,15 +25,6 @@ async function loadClass(auth: AuthContext, classId: string, perm: Perm) {
   if (!cls) throw new ApiError(404, "not_found", "Class not found.");
   if (!canUseClass(auth, cls.id, perm)) throw new ApiError(403, "forbidden", "You can only take attendance for your own class.");
   return cls;
-}
-
-const isWeekend = (iso: string) => [0, 6].includes(fromIsoDate(iso).getUTCDay());
-
-/** Today, or the most recent weekday when today is a weekend. */
-function lastSchoolDay(today: string) {
-  let d = today;
-  while (isWeekend(d)) d = addDays(d, -1);
-  return d;
 }
 
 /** The class register: active students, alphabetical. */

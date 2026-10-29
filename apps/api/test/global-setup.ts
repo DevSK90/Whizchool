@@ -8,7 +8,7 @@ import { TEST_DATABASE_URL } from "./env";
 const API_ROOT = join(import.meta.dirname, "..");
 
 /** Everything that shapes the seeded database; a change rebuilds the template. */
-function fingerprint() {
+export function fingerprint() {
   const hash = createHash("sha256");
   const walk = (dir: string): string[] =>
     readdirSync(dir).flatMap((name) => {
