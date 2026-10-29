@@ -15,7 +15,7 @@ import { currentYearId } from "../school";
 
 type SchoolRow = Prisma.SchoolGetPayload<object>;
 
-function toSchool(s: SchoolRow): School {
+export function toSchool(s: SchoolRow): School {
   return omitNulls({
     name: s.name,
     shortName: s.shortName,

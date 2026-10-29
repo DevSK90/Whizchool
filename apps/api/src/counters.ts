@@ -14,3 +14,12 @@ export async function nextNumber(tx: Tx, key: string, start: number): Promise<nu
     RETURNING "value"`;
   return row.value;
 }
+
+/** Reserves `count` consecutive values of a sequence at once; returns the first. */
+export async function reserveNumbers(tx: Tx, key: string, count: number, start: number): Promise<number> {
+  const [row] = await tx.$queryRaw<{ value: number }[]>`
+    INSERT INTO "Counter" ("key", "value") VALUES (${key}, ${start + count - 1})
+    ON CONFLICT ("key") DO UPDATE SET "value" = "Counter"."value" + ${count}
+    RETURNING "value"`;
+  return row.value - count + 1;
+}

@@ -61,6 +61,18 @@ const schema = z.object({
   STORAGE_DIR: z.string().default("storage"),
   /** Signs short-lived file links. Required (32+ characters) in production. */
   FILE_URL_SECRET: z.string().min(32, "Use at least 32 characters").optional(),
+  /**
+   * Online payments. "fake" (development and tests) sends parents to the app's own sandbox page and
+   * signs the notification itself; "sandbox" uses sandbox.payhere.lk; "live" takes real payments.
+   */
+  PAYHERE_MODE: z.enum(["fake", "sandbox", "live"]).optional(),
+  PAYHERE_MERCHANT_ID: z.string().optional(),
+  PAYHERE_MERCHANT_SECRET: z.string().optional(),
+  /**
+   * Where PayHere's servers can reach this API (notify_url). Defaults to APP_URL, which serves the
+   * API under /api/v1 behind the reverse proxy. For sandbox tests on a laptop, use a tunnel URL.
+   */
+  PUBLIC_API_URL: z.url().optional(),
   /** Per-IP limits on sign-in, password reset and other abuse-prone endpoints. */
   RATE_LIMITS: bool("true"),
   /** Mounts /api/v1/test/* (database reset for the contract suite). Refused in production. */
@@ -85,6 +97,11 @@ function load() {
     JOBS_MODE: env.JOBS_MODE ?? (env.NODE_ENV === "test" ? "inline" : "pgboss"),
     // A fixed development secret keeps file links valid across restarts; production must set its own.
     FILE_URL_SECRET: env.FILE_URL_SECRET ?? (production ? "" : "whizchool-development-file-url-secret!"),
+    PAYHERE_MODE: env.PAYHERE_MODE ?? (production ? "live" : "fake"),
+    // The fake provider signs with a fixed development secret and PayHere's public sandbox merchant ID.
+    PAYHERE_MERCHANT_ID: env.PAYHERE_MERCHANT_ID ?? (env.PAYHERE_MODE === "sandbox" || env.PAYHERE_MODE === "live" || production ? "" : "1211149"),
+    PAYHERE_MERCHANT_SECRET: env.PAYHERE_MERCHANT_SECRET ?? (env.PAYHERE_MODE === "sandbox" || env.PAYHERE_MODE === "live" || production ? "" : "whizchool-fake-payhere-secret"),
+    PUBLIC_API_URL: (env.PUBLIC_API_URL ?? env.APP_URL).replace(/\/+$/, ""),
   };
   if (production) {
     const unsafe = [
@@ -92,11 +109,15 @@ function load() {
       config.EXPOSE_DEV_LINKS && "EXPOSE_DEV_LINKS (leaks invite and reset links)",
       !config.COOKIE_SECURE && "COOKIE_SECURE=false (session cookie over plain HTTP)",
       !config.FILE_URL_SECRET && "FILE_URL_SECRET missing (file links can't be signed)",
+      config.PAYHERE_MODE === "fake" && "PAYHERE_MODE=fake (anyone signed in could mark an order paid)",
     ].filter(Boolean);
     if (unsafe.length) throw new Error(`Unsafe production configuration: ${unsafe.join("; ")}.`);
   }
   if (config.SMS_TRANSPORT === "notifylk" && (!config.NOTIFYLK_USER_ID || !config.NOTIFYLK_API_KEY)) {
     throw new Error("SMS_TRANSPORT=notifylk needs NOTIFYLK_USER_ID and NOTIFYLK_API_KEY.");
+  }
+  if (config.PAYHERE_MODE !== "fake" && (!config.PAYHERE_MERCHANT_ID || !config.PAYHERE_MERCHANT_SECRET)) {
+    throw new Error(`PAYHERE_MODE=${config.PAYHERE_MODE} needs PAYHERE_MERCHANT_ID and PAYHERE_MERCHANT_SECRET.`);
   }
   if (config.EMAIL_TRANSPORT === "resend" && !config.RESEND_API_KEY) {
     throw new Error("EMAIL_TRANSPORT=resend needs RESEND_API_KEY.");

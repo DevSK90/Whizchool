@@ -6,10 +6,12 @@ import { auditLogRoutes } from "./audit-log";
 import { authRoutes } from "./auth";
 import { classRoutes } from "./classes";
 import { examRoutes } from "./exams";
+import { feeRoutes } from "./fees";
 import { fileRoutes } from "./files";
 import { healthRoutes } from "./health";
 import { importRoutes } from "./imports";
 import { messageRoutes } from "./messages";
+import { payhereRoutes } from "./payhere";
 import { promotionRoutes } from "./promotions";
 import { publicRoutes } from "./public";
 import { reportCardRoutes } from "./report-cards";
@@ -40,5 +42,7 @@ export const routes: RouteDef<any, any>[] = [
   ...reportCardRoutes,
   ...resultRoutes,
   ...promotionRoutes,
+  ...feeRoutes,
+  ...payhereRoutes,
   ...(config.ENABLE_TEST_ROUTES ? testSupportRoutes : []),
 ];

@@ -83,6 +83,10 @@ describe("year-end promotions", () => {
     expect((await get(`/students/${graduate.studentId}`)).status).toBe("left");
     const terms: Json[] = await get("/terms");
     expect(terms.map((t) => t.startDate.slice(0, 4))).toEqual(["2027", "2027", "2027"]);
+    // Fees carry over at last year's amounts.
+    const fees: Json[] = await get("/fee-structures");
+    expect(fees.length).toBeGreaterThan(0);
+    expect(fees.every((f) => f.yearId !== preview.fromYear.id)).toBe(true);
 
     // Class teachers carry over to their class's next-year counterpart.
     const teacher = await login("teacher");

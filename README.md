@@ -35,6 +35,8 @@ Demo accounts (password `demo1234`): `admin@`, `principal@`, `teacher@`, `accoun
 
 **Email and SMS in development.** Nothing leaves your machine. Emails and SMS both land in Mailpit (http://localhost:8025). An SMS shows up as an email to `<number>@sms.test`, with the part count and encoding in the subject. Messages go out through a background job queue (pg-boss, in the same Postgres), so a message shows "sending" for a moment before it shows "sent".
 
+**Online payments in development.** No PayHere account is needed: "Pay" in the parent portal opens the app's own sandbox page, which completes the payment the way PayHere's notification would. To try the real PayHere sandbox, set `PAYHERE_MODE=sandbox` with your sandbox merchant ID and secret in `apps/api/.env` (see `.env.example`).
+
 ## Everyday commands
 
 | Command | Does |

@@ -1,5 +1,8 @@
 import { prisma } from "../db";
 import { logger } from "../logger";
+import { schoolToday } from "../dates";
+import { generateMonthlyInvoices, monthlyRunDone } from "../services/invoices";
+import { expireOrders } from "../services/payhere";
 import { store } from "../storage";
 import { enqueue, registerJob } from "./queue";
 
@@ -41,7 +44,21 @@ export async function cleanup() {
 
 registerJob("maintenance.sweep", async () => {
   await sweepMessages();
+  await expireOrders();
 });
 registerJob("maintenance.cleanup", async () => {
   await cleanup();
+});
+
+/** Daily: bills this month's fees unless that has already happened (by this job or by hand). */
+export async function monthlyInvoicesDue() {
+  const period = schoolToday().slice(0, 7);
+  if (await monthlyRunDone(prisma, period)) return null;
+  const result = await generateMonthlyInvoices(prisma, period);
+  logger.info({ period, ...result }, "monthly invoices");
+  return result;
+}
+
+registerJob("invoices.monthly", async () => {
+  await monthlyInvoicesDue();
 });

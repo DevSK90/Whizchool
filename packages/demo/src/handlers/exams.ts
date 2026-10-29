@@ -508,6 +508,10 @@ export const examRoutes: Route[] = [
           db.terms.insert({ ...t, id: `term_${nextName}_${t.number}`, yearId: nextYear.id, startDate: nextYearIso(t.startDate), endDate: nextYearIso(t.endDate) });
         }
       }
+      // Fees carry over at this year's amounts until the accountant sets next year's.
+      if (!db.feeStructures.rows.some((f) => f.yearId === nextYear.id)) {
+        for (const f of db.feeStructures.rows.filter((x) => x.yearId === year.id)) db.feeStructures.insert({ ...f, id: nextId(db, "fs"), yearId: nextYear.id });
+      }
       // Next year mirrors this year's classes, teachers and subjects included.
       const classFor = new Map<string, string>();
       for (const [id, c] of targets) {

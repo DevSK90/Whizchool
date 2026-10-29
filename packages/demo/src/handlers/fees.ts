@@ -225,6 +225,7 @@ export const feeRoutes: Route[] = [
     handler: (ctx) => {
       requirePerm(ctx, "fees.edit");
       const inv = ctx.db.invoices.get(ctx.params.id) ?? fail(404, "not_found", "Invoice not found.");
+      if (inv.status === "void") fail(409, "invalid_transition", "This invoice is already void.");
       if (inv.paid > 0) fail(409, "has_payments", "An invoice with payments can't be voided. Reverse the payments first.");
       if (!ctx.body?.reason?.trim()) fail(422, "validation", "Give a reason for voiding.", { reason: "Required" });
       inv.status = "void";
@@ -269,6 +270,7 @@ export const feeRoutes: Route[] = [
       if (!(value > 0)) fail(422, "validation", "Amount must be greater than zero.", { amount: "Must be greater than 0" });
       if (!METHODS.includes(method) || method === "payhere") fail(422, "validation", "Choose a payment method.", { method: "Required" });
       if ((method === "cheque" || method === "bank_deposit") && !reference?.trim()) fail(422, "validation", "Reference is required.", { reference: "Cheque or slip number is required" });
+      if (paidAt && paidAt > todayISO(ctx)) fail(422, "validation", "Please fix the highlighted fields.", { paidAt: "Can't be in the future" });
       const balance = db.invoices.rows.filter((i) => i.studentId === s.id && i.status !== "void").reduce((a, i) => a + i.balance, 0);
       if (value > balance) fail(422, "validation", "Amount is more than the outstanding balance.", { amount: `Outstanding balance is ${balance}` });
       const allocations = allocate(db, s.id, value);
@@ -337,6 +339,7 @@ export const feeRoutes: Route[] = [
       const { name, recurrence, description } = ctx.body ?? {};
       if (!name?.trim()) fail(422, "validation", "Name is required.", { name: "Required" });
       if (!["monthly", "one_time", "ad_hoc"].includes(recurrence)) fail(422, "validation", "Choose how often it's charged.", { recurrence: "Required" });
+      if (ctx.db.feeTypes.rows.some((f) => f.name.toLowerCase() === name.trim().toLowerCase())) fail(409, "duplicate", "A fee type with this name already exists.", { name: "Already exists" });
       const ft = ctx.db.feeTypes.insert({ id: nextId(ctx.db, "fee"), name: name.trim(), recurrence, description, active: true });
       audit(ctx, "feeType.create", "Fee type", `Added fee type ${ft.name}`, ft.id);
       return ft;
@@ -392,6 +395,7 @@ export const feeRoutes: Route[] = [
       if (!name?.trim()) fail(422, "validation", "Name is required.", { name: "Required" });
       if (kind === "percent" && !(value > 0 && value <= 100)) fail(422, "validation", "Percentage must be 1–100.", { value: "1–100" });
       if (kind === "fixed" && !(value > 0)) fail(422, "validation", "Amount must be greater than zero.", { value: "Must be greater than 0" });
+      if (ctx.db.discounts.rows.some((d) => d.name.toLowerCase() === name.trim().toLowerCase())) fail(409, "duplicate", "A discount with this name already exists.", { name: "Already exists" });
       const d = ctx.db.discounts.insert({ id: nextId(ctx.db, "disc"), name: name.trim(), kind, value: Number(value), feeTypeId: "fee_tuition", description });
       audit(ctx, "discount.create", "Discount", `Added discount ${d.name}`, d.id);
       return d;

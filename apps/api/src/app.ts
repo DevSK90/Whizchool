@@ -24,6 +24,8 @@ export function createApp() {
 
   const api = express.Router();
   api.use(express.json({ limit: "1mb" }));
+  // Only the PayHere webhook accepts form bodies; every other route insists on JSON (see route.ts).
+  api.use(express.urlencoded({ extended: false, limit: "32kb" }));
   api.use(originCheck(config.APP_ORIGINS));
   api.use(sessionMiddleware);
   mountRoutes(api, routes);

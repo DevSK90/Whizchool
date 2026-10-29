@@ -6,7 +6,7 @@ import { logger } from "../logger";
  * Background work. In production the jobs live in Postgres (pg-boss) and survive restarts; with
  * JOBS_MODE=inline (tests) they run in-process straight away so results can be checked at once.
  */
-export type JobName = "messages.deliver" | "email.send" | "maintenance.sweep" | "maintenance.cleanup";
+export type JobName = "messages.deliver" | "email.send" | "maintenance.sweep" | "maintenance.cleanup" | "invoices.monthly";
 
 type Handler = (data: Record<string, unknown>) => Promise<void>;
 
@@ -20,6 +20,8 @@ const SCHEDULES: { name: JobName; cron: string }[] = [
   { name: "maintenance.sweep", cron: "* * * * *" },
   // Old sessions, tokens, idempotency keys and never-attached uploads.
   { name: "maintenance.cleanup", cron: "30 2 * * *" },
+  // Bills the month's fees early on the 1st; runs daily so a month missed while the server was down still gets billed.
+  { name: "invoices.monthly", cron: "0 6 * * *" },
 ];
 
 let boss: PgBoss | null = null;

@@ -179,6 +179,11 @@ export const promotionRoutes = [
               data: terms.map((t) => ({ yearId: next!.id, number: t.number, name: t.name, startDate: nextYearDate(t.startDate), endDate: nextYearDate(t.endDate) })),
             });
           }
+          // Fees carry over at this year's amounts until the accountant sets next year's.
+          if (!(await tx.feeStructure.count({ where: { yearId: next.id } }))) {
+            const fees = await tx.feeStructure.findMany({ where: { yearId: year.id } });
+            await tx.feeStructure.createMany({ data: fees.map((f) => ({ yearId: next!.id, gradeId: f.gradeId, feeTypeId: f.feeTypeId, amount: f.amount })) });
+          }
           // Next year mirrors this year's classes (teachers and subjects included); staff adjust them in Classes.
           const existing = new Map((await tx.classSection.findMany({ where: { yearId: next.id } })).map((c) => [c.name, c.id]));
           const classFor = new Map<string, string>();
