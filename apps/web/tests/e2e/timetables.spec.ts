@@ -65,6 +65,28 @@ test("admin drags a lesson onto the board and publishes it; the teacher and the 
   await expect(page.locator(`[title*="${shortTime}"]`).first()).toBeVisible();
 });
 
+test("finds a class and a teacher by typing", async ({ page }) => {
+  await signIn(page, "admin");
+  await open(page, "/app/timetables");
+  await expect(page.getByRole("cell", { name: "9-A", exact: true })).toBeVisible();
+  await page.getByRole("searchbox", { name: "Search by class or class teacher" }).fill("10a");
+  await expect(page.getByRole("cell", { name: "9-A", exact: true })).toBeHidden();
+  await expect(page.getByRole("cell", { name: "10-A", exact: true })).toBeVisible();
+
+  await page.getByRole("tab", { name: "Teachers" }).click();
+  const picker = page.getByRole("combobox", { name: "Choose a teacher" });
+  await picker.click();
+  const options = page.getByRole("option");
+  await options.first().waitFor();
+  const all = await options.count();
+  const name = (await options.first().textContent())!;
+  await page.getByPlaceholder("Type a teacher's name").fill(name.split(" ").at(-1)!);
+  await expect.poll(() => options.count()).toBeLessThan(all);
+  await options.filter({ hasText: name }).first().click();
+  await expect(picker).toHaveText(name);
+  await expect(page).toHaveURL(/staff=/);
+});
+
 test("a clash shows on the board and stops publishing", async ({ page }) => {
   await signIn(page, "admin");
   await open(page, "/app/timetables/cls_2026_8b");

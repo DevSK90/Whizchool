@@ -77,7 +77,16 @@ export async function seedDemoSchool(db: Db, size: SeedSize = "standard") {
     await db.user.update({ where: { id: u.id }, data: { passwordHash: await hash(u.password) } });
   }
   await insert(db.userRole, demo.users.rows.flatMap((u) => u.roleIds.map((roleId) => ({ userId: u.id, roleId }))));
-  await insert(db.staff, demo.staff.rows.map((s) => ({ ...s, userId: s.userId ?? null })));
+  await insert(
+    db.staff,
+    demo.staff.rows.map((s) => ({
+      ...s,
+      userId: s.userId ?? null,
+      dob: s.dob ? new Date(`${s.dob}T00:00:00Z`) : null,
+      joinedOn: s.joinedOn ? new Date(`${s.joinedOn}T00:00:00Z`) : null,
+      leftOn: s.leftOn ? new Date(`${s.leftOn}T00:00:00Z`) : null,
+    })),
+  );
   await insert(
     db.guardian,
     demo.guardians.rows.map((g) => ({

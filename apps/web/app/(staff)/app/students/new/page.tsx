@@ -14,7 +14,7 @@ export default function NewStudentPage() {
   const router = useRouter();
   const qc = useQueryClient();
   return (
-    <div className="mx-auto max-w-3xl">
+    <div>
       <PageHeader back={{ href: "/app/students", label: t("profile.back") }} title={t("form.newTitle")} description={t("form.newDescription")} />
       <StudentForm
         submitLabel={t("form.create")}

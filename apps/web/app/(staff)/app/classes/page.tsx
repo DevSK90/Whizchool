@@ -158,7 +158,7 @@ function CreateClassDialog() {
               ariaLabel={t("classTeacher")}
               value={form.classTeacherId}
               onChange={(v) => setForm({ ...form, classTeacherId: v })}
-              options={(staff.data ?? []).filter((s) => s.designation.startsWith("Teacher")).map((s) => ({ value: s.id, label: s.name }))}
+              options={(staff.data ?? []).filter((s) => s.staffType === "academic").map((s) => ({ value: s.id, label: s.name }))}
               allLabel={tc("none")}
               className="sm:w-full"
             />

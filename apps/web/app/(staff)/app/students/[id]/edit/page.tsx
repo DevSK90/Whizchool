@@ -21,7 +21,7 @@ export default function EditStudentPage({ params }: PageProps<"/app/students/[id
   if (isPending) return <PageSkeleton />;
   if (error) return <ErrorState error={error} onRetry={refetch} />;
   return (
-    <div className="mx-auto max-w-3xl">
+    <div>
       <PageHeader back={{ href: `/app/students/${id}`, label: student.fullName }} title={t("form.editTitle", { name: student.fullName })} />
       <StudentForm
         student={student}

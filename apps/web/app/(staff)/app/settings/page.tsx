@@ -343,7 +343,7 @@ function SubjectDialog({ subject }: { subject?: Subject }) {
   const [open, setOpen] = useState(false);
   const staff = useStaff();
   // This subject's current teachers first, so they don't get lost in a long list.
-  const teachers = (staff.data ?? []).filter((s) => s.status === "active" && s.designation.startsWith("Teacher")).sort((a, b) => Number(subject?.teacherIds.includes(b.id) ?? false) - Number(subject?.teacherIds.includes(a.id) ?? false));
+  const teachers = (staff.data ?? []).filter((s) => s.status === "active" && s.staffType === "academic").sort((a, b) => Number(subject?.teacherIds.includes(b.id) ?? false) - Number(subject?.teacherIds.includes(a.id) ?? false));
   const blank = { name: "", code: "", levels: [] as GradeLevel[], group: "", examNo: "", teacherIds: [] as string[] };
   const [form, setForm] = useState(blank);
   const [errors, setErrors] = useState<Record<string, string>>({});

@@ -1,10 +1,12 @@
 import { z } from "zod";
 import { ApiError } from "@whizchool/shared/api";
+import { staffTypeFor } from "@whizchool/shared/staff";
 import type { User } from "@whizchool/shared/types";
 import { audit } from "../audit";
 import { issueToken } from "../auth/tokens";
 import { config } from "../config";
 import { nextNumber } from "../counters";
+import { fromIsoDate, schoolToday } from "../dates";
 import { prisma } from "../db";
 import { sendEmail } from "../email/mailer";
 import { inviteEmail, inviteLinkPath } from "../email/templates";
@@ -16,7 +18,7 @@ import { schoolName } from "../school";
 
 const userInclude = {
   roles: { include: { role: { select: { id: true, name: true } } } },
-  staff: { select: { id: true } },
+  staff: { select: { id: true, status: true } },
   guardian: { select: { id: true } },
 } satisfies Prisma.UserInclude;
 
@@ -48,12 +50,37 @@ async function findUser(id: string) {
 }
 
 /** Sends the invitation email (never throws); in development also returns the link for the UI to show. */
-async function deliverInvite(user: { name: string; email: string; kind: "staff" | "parent" }, token: string) {
+export async function deliverInvite(user: { name: string; email: string; kind: "staff" | "parent" }, token: string) {
   await sendEmail(inviteEmail(user, await schoolName(), token));
   return config.EXPOSE_DEV_LINKS ? inviteLinkPath(token) : undefined;
 }
 
-const roleIds = z.array(z.string().max(100)).min(1, "Choose at least one role").max(20);
+export const roleIds = z.array(z.string().max(100)).min(1, "Choose at least one role").max(20);
+
+/** The roles to give a new login; refuses an email already in use. */
+export async function checkInvite(email: string, ids: string[]) {
+  if (await prisma.user.findUnique({ where: { email: email.toLowerCase() }, select: { id: true } })) {
+    throw new ApiError(409, "duplicate", "A user with this email already exists.", { email: "Already registered" });
+  }
+  const roles = await prisma.role.findMany({ where: { id: { in: ids } }, select: { id: true } });
+  if (!roles.length) throw new ApiError(422, "validation", "Please fix the highlighted fields.", { roleIds: "Choose at least one role" });
+  return roles;
+}
+
+export async function createInvitedUser(tx: Prisma.TransactionClient, data: { name: string; email: string; phone?: string; kind: "staff" | "parent"; roles: { id: string }[] }) {
+  const user = await tx.user.create({
+    data: {
+      name: data.name,
+      email: data.email.toLowerCase(),
+      phone: data.phone || null,
+      kind: data.kind,
+      status: "invited",
+      invitedAt: new Date(),
+      roles: { create: data.roles.map((r) => ({ roleId: r.id })) },
+    },
+  });
+  return { user, token: await issueToken(tx, user.id, "invite") };
+}
 
 export const userRoutes = [
   defineRoute({
@@ -107,25 +134,12 @@ export const userRoutes = [
       roleIds,
     }),
     handler: async ({ auth, body }) => {
-      if (await prisma.user.findUnique({ where: { email: body.email }, select: { id: true } })) {
-        throw new ApiError(409, "duplicate", "A user with this email already exists.", { email: "Already registered" });
-      }
-      const roles = await prisma.role.findMany({ where: { id: { in: body.roleIds } }, select: { id: true } });
-      if (!roles.length) throw new ApiError(422, "validation", "Please fix the highlighted fields.", { roleIds: "Choose at least one role" });
+      const roles = await checkInvite(body.email, body.roleIds);
 
       const { user, token } = await prisma.$transaction(async (tx) => {
-        const user = await tx.user.create({
-          data: {
-            name: body.name,
-            email: body.email,
-            phone: body.phone || null,
-            kind: body.kind,
-            status: "invited",
-            invitedAt: new Date(),
-            roles: { create: roles.map((r) => ({ roleId: r.id })) },
-          },
-        });
+        const { user, token } = await createInvitedUser(tx, { name: body.name, email: body.email, phone: body.phone, kind: body.kind, roles });
         if (body.kind === "staff") {
+          const designation = body.designation || "Staff";
           const empNo = await nextNumber(tx, "empNo", (await tx.staff.count()) + 1);
           await tx.staff.create({
             data: {
@@ -134,12 +148,13 @@ export const userRoutes = [
               name: body.name,
               email: body.email,
               phone: body.phone ?? "",
-              designation: body.designation || "Staff",
+              designation,
+              staffType: staffTypeFor(designation),
+              joinedOn: fromIsoDate(schoolToday()),
               userId: user.id,
             },
           });
         }
-        const token = await issueToken(tx, user.id, "invite");
         await audit(tx, auth, { action: "user.invite", entity: "User", entityId: user.id, summary: `Invited ${user.name} (${user.email})` });
         return { user, token };
       });
@@ -202,6 +217,7 @@ export const userRoutes = [
     summary: "Allow sign-in again (or back to invited if no password was ever set)",
     handler: async ({ auth, params }) => {
       const user = await findUser(params.id);
+      if (user.staff?.status === "inactive") throw new ApiError(409, "invalid_transition", `${user.name} has left the school. Mark them as back in Staff first.`);
       await prisma.$transaction(async (tx) => {
         await tx.user.update({ where: { id: user.id }, data: { status: user.passwordHash ? "active" : "invited" } });
         await audit(tx, auth, { action: "user.reactivate", entity: "User", entityId: user.id, summary: `Reactivated ${user.name}` });

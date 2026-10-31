@@ -33,6 +33,7 @@ export function Pill({ tone, children, icon, className }: { tone: Tone; children
 
 const MAPS = {
   student: { active: "success", left: "neutral", graduated: "info", expelled: "danger" },
+  staff: { active: "success", inactive: "neutral" },
   application: { new: "info", interview: "warning", accepted: "success", rejected: "danger", enrolled: "success", withdrawn: "neutral" },
   attendance: { present: "success", absent: "danger", late: "warning", excused: "neutral" },
   exam: { scheduled: "neutral", marks_entry: "warning", review: "info", released: "success" },

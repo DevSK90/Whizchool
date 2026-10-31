@@ -23,6 +23,7 @@
       "edit": "Edit class",
       "takeAttendance": "Take attendance",
       "addSubject": "Add a subject",
+      "allSubjectsAdded": "This class has every subject available at its level. To add another, create it or add this level to it in School settings → Subjects.",
       "subjectAdded": "Subject added.",
       "subjectRemoved": "Subject removed.",
       "removeSubject": "Remove {name}",
@@ -272,6 +273,8 @@
     },
     "chooseClass": "Choose a class",
     "chooseTeacher": "Choose a teacher",
+    "searchTeacher": "Type a teacher's name",
+    "searchClasses": "Search by class or class teacher",
     "teacherEmpty": "No published lessons for this teacher.",
     "columns": {
       "class": "Class",

@@ -20,7 +20,6 @@ import { api } from "@/lib/api/client";
 import { useApiMutation, useClass, useStaff, useSubjects } from "@/lib/api/hooks";
 import type { ClassDetail } from "@whizchool/shared/types";
 import { useCan, useSession } from "@/lib/auth";
-import { formatMoney } from "@/lib/format";
 
 export default function ClassDetailPage({ params }: PageProps<"/app/classes/[id]">) {
   const { id } = use(params);
@@ -82,10 +81,8 @@ export default function ClassDetailPage({ params }: PageProps<"/app/classes/[id]
             columns={[
               { key: "adm", header: ts("admissionNo"), cell: (s) => <span className="tabular text-muted-foreground">{s.admissionNo}</span> },
               { key: "name", header: ts("name"), cell: (s) => <span className="font-medium">{s.fullName}</span> },
-              { key: "guardian", header: ts("guardian"), hideBelow: "md", cell: (s) => <span className="text-muted-foreground">{s.guardianPhone}</span> },
-              ...(can("fees.view")
-                ? [{ key: "bal", header: ts("balance"), className: "text-right tabular", headClassName: "text-right", cell: (s: ClassDetail["students"][number]) => (s.balance > 0 ? formatMoney(s.balance) : "—") }]
-                : []),
+              { key: "guardian", header: ts("guardian"), hideBelow: "md", cell: (s) => <span className="text-muted-foreground">{s.primaryGuardian}</span> },
+              { key: "phone", header: ts("guardianPhone"), hideBelow: "md", cell: (s) => <span className="tabular text-muted-foreground">{s.guardianPhone}</span> },
             ]}
           />
           <p className="mt-2 text-xs text-muted-foreground">{tc("total")}: {c.students.length}</p>
@@ -118,7 +115,7 @@ function ClassSettings({ c }: { c: ClassDetail }) {
             value={teacher}
             onChange={setTeacher}
             allLabel={tc("none")}
-            options={(staff.data ?? []).filter((s) => s.designation.startsWith("Teacher")).map((s) => ({ value: s.id, label: s.name }))}
+            options={(staff.data ?? []).filter((s) => s.staffType === "academic").map((s) => ({ value: s.id, label: s.name }))}
             className="sm:w-full"
           />
         </Field>
@@ -147,7 +144,7 @@ function SubjectTeachers({ c, editable }: { c: ClassDetail; editable: boolean })
   const add = useApiMutation((subjectId: string) => api.post(`/classes/${c.id}/subjects`, { subjectId }), { invalidate: refresh, success: t("subjectAdded") });
   const remove = useApiMutation((id: string) => api.delete(`/class-subjects/${id}`), { invalidate: refresh, success: t("subjectRemoved") });
   const [removing, setRemoving] = useState<{ id: string; name: string } | null>(null);
-  const allTeachers = (staff.data ?? []).filter((s) => s.designation.startsWith("Teacher"));
+  const allTeachers = (staff.data ?? []).filter((s) => s.staffType === "academic");
   const nameOf = new Map((staff.data ?? []).map((s) => [s.id, s.name]));
   /** The subject's teacher list, or every teacher while it has none; the current teacher always stays selectable. */
   const optionsFor = (s: ClassDetail["subjects"][number]) => {
@@ -207,6 +204,7 @@ function SubjectTeachers({ c, editable }: { c: ClassDetail; editable: boolean })
           />
         </div>
       )}
+      {editable && !!catalogue.data && !canAdd.length && <p className="px-6 pt-3 text-sm text-muted-foreground">{t("allSubjectsAdded")}</p>}
       <ConfirmDialog
         open={!!removing}
         onOpenChange={(o) => !o && setRemoving(null)}

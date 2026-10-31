@@ -94,7 +94,7 @@ const subjectGroup = (level: GradeLevel, s: Subject, streamId: string | undefine
 
 const optionsRequired = (db: DB, c: { streamId?: string }) => db.streams.get(c.streamId)?.optionsRequired ?? 0;
 
-function requireStaff(ctx: Parameters<Route["handler"]>[0]) {
+export function requireStaff(ctx: Parameters<Route["handler"]>[0]) {
   const s = requireAuth(ctx);
   if (s.kind !== "staff") fail(403, "forbidden", "Staff only.");
   return s;
@@ -353,14 +353,6 @@ export const schoolRoutes: Route[] = [
       ctx.db.gradeBands = bands.map((b) => ({ ...b })).sort((a, b) => b.min - a.min);
       audit(ctx, "settings.gradeBands", "Grade bands", "Updated grading scale");
       return ctx.db.gradeBands;
-    },
-  },
-  {
-    method: "GET",
-    path: "/staff",
-    handler: (ctx) => {
-      requireStaff(ctx);
-      return ctx.db.staff.rows.filter((s) => s.status === "active").sort((a, b) => a.name.localeCompare(b.name));
     },
   },
 ];

@@ -1,4 +1,8 @@
 {
+  "staff": {
+    "active": "Active",
+    "inactive": "Left"
+  },
   "student": {
     "active": "Active",
     "left": "Left",

@@ -100,6 +100,14 @@ export const useStudents = (params: Params) =>
     queryFn: ({ signal }) => api.get<T.Paginated<T.StudentListItem>>("/students", params, signal),
     placeholderData: keepPreviousData,
   });
+export const useStaffDirectory = (params: Params) =>
+  useQuery({
+    queryKey: ["staff", "directory", params],
+    queryFn: ({ signal }) => api.get<T.Paginated<T.Staff>>("/staff/directory", params, signal),
+    placeholderData: keepPreviousData,
+  });
+export const useStaffMember = (id: string) =>
+  useQuery({ queryKey: ["staffMember", id], queryFn: () => api.get<T.StaffDetail>(`/staff/${id}`), enabled: !!id });
 export const useStudent = (id: string) =>
   useQuery({ queryKey: ["student", id], queryFn: () => api.get<T.StudentDetail>(`/students/${id}`), enabled: !!id });
 export const useStudentAttendance = (id: string) =>

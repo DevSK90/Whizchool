@@ -21,6 +21,7 @@ import { roleRoutes } from "./roles";
 import { schoolRoutes } from "./school";
 import { studentRoutes } from "./students";
 import { testSupportRoutes } from "./test-support";
+import { staffRoutes } from "./staff";
 import { timetableRoutes } from "./timetables";
 import { userRoutes } from "./users";
 
@@ -34,6 +35,7 @@ export const routes: RouteDef<any, any>[] = [
   ...auditLogRoutes,
   ...schoolRoutes,
   ...classRoutes,
+  ...staffRoutes,
   ...timetableRoutes,
   ...studentRoutes,
   ...fileRoutes,

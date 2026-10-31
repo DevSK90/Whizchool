@@ -8,6 +8,7 @@ export const PERMISSION_MODULES = {
   dashboard: ["view"],
   admissions: ["view", "create", "edit", "approve"],
   students: ["view", "create", "edit"],
+  staff: ["view", "create", "edit"],
   classes: ["view", "create", "edit"],
   timetable: ["view", "edit"],
   attendance: ["view", "create", "edit"],

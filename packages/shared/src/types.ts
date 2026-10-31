@@ -187,16 +187,46 @@ export interface GradeBand {
 
 // ---------- People ----------
 
+export type StaffType = "academic" | "non_academic";
+
+/** What every staff member can see of a colleague: the teacher pickers and the staff list. */
 export interface Staff {
   id: ID;
   empNo: string;
   title: string;
+  /** With the title: "Mrs. Dilani Peiris". */
   name: string;
-  email: string;
+  /** Only someone with a login must have one. */
+  email?: string;
   phone: string;
   designation: string;
+  staffType: StaffType;
   userId?: ID;
+  /** inactive means they have left the school. */
   status: "active" | "inactive";
+  joinedOn?: DateString;
+  leftOn?: DateString;
+}
+
+/** The private part of the record, for people who hold staff.view. */
+export interface StaffRecord extends Staff {
+  gender?: Gender;
+  dob?: DateString;
+  nic?: string;
+  address?: string;
+  qualifications?: string;
+  emergencyName?: string;
+  emergencyPhone?: string;
+  notes?: string;
+  leaveReason?: string;
+}
+
+export interface StaffDetail extends StaffRecord {
+  loginStatus?: UserStatus;
+  /** This year's and next year's classes: what must be handed over before they can leave. */
+  teaching: { classId: ID; className: string; subjectName?: string }[];
+  /** Subject teacher lists they're on. */
+  subjects: string[];
 }
 
 export interface Guardian {

@@ -20,7 +20,7 @@ import type {
   ReportCardStatus,
   Role,
   School,
-  Staff,
+  StaffRecord,
   Stream,
   Student,
   Subject,
@@ -110,7 +110,7 @@ export interface DB {
   timetables: StoredTimetable[];
   timetableBlocks: StoredBlock[];
   gradeBands: GradeBand[];
-  staff: Table<Staff>;
+  staff: Table<StaffRecord>;
   guardians: Table<Guardian>;
   students: Table<Student>;
   enrollments: Table<Enrollment>;

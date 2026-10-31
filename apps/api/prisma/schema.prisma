@@ -369,16 +369,35 @@ enum StaffStatus {
   inactive
 }
 
+enum StaffType {
+  academic
+  non_academic
+}
+
 model Staff {
-  id          String      @id @default(uuid(7))
-  empNo       String      @unique
-  title       String
-  name        String
-  email       String
-  phone       String
-  designation String
-  status      StaffStatus @default(active)
-  userId      String?     @unique
+  id             String      @id @default(uuid(7))
+  empNo          String      @unique
+  title          String
+  name           String
+  /// Only someone with a login must have one.
+  email          String?
+  phone          String
+  designation    String
+  staffType      StaffType   @default(non_academic)
+  /// inactive means they have left the school.
+  status         StaffStatus @default(active)
+  userId         String?     @unique
+  gender         Gender?
+  dob            DateTime?   @db.Date
+  nic            String?
+  address        String?
+  joinedOn       DateTime?   @db.Date
+  qualifications String?
+  emergencyName  String?
+  emergencyPhone String?
+  notes          String?
+  leftOn         DateTime?   @db.Date
+  leaveReason    String?
 
   user          User?            @relation(fields: [userId], references: [id])
   classes       ClassSection[]

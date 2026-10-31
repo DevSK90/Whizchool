@@ -4,6 +4,7 @@ import { validateTerms } from "@whizchool/shared/calendar";
 import { validateBands } from "@whizchool/shared/grading";
 import type { AcademicYear, GradeBand, School, Staff, Stream, Subject, Term } from "@whizchool/shared/types";
 import { audit } from "../audit";
+import { staffSelect, toStaff } from "./staff";
 import { fromIsoDate, isoDate, toIsoDate } from "../dates";
 import { prisma } from "../db";
 import type { Prisma } from "../generated/prisma/client";
@@ -386,8 +387,8 @@ export const schoolRoutes = [
     summary: "Active staff, for class teacher and subject teacher pickers",
     handler: async ({ session }): Promise<Staff[]> => {
       if (session.kind !== "staff") throw new ApiError(403, "forbidden", "Staff only.");
-      const staff = await prisma.staff.findMany({ where: { status: "active" }, orderBy: { name: "asc" } });
-      return staff.map((s) => omitNulls(s));
+      const staff = await prisma.staff.findMany({ where: { status: "active" }, select: staffSelect, orderBy: { name: "asc" } });
+      return staff.map(toStaff);
     },
   }),
 ];

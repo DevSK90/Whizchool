@@ -7,6 +7,7 @@ const API_CONTRACTS = [
   "tests/contract/admin.test.ts",
   "tests/contract/school.test.ts",
   "tests/contract/students.test.ts",
+  "tests/contract/staff.test.ts",
   "tests/contract/admissions.test.ts",
   "tests/contract/import.test.ts",
   "tests/contract/comms.test.ts",

@@ -162,7 +162,7 @@ function UserActions({ user, onEditRoles }: { user: UserRow; onEditRoles: () => 
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
         title={t("deactivateTitle", { name: user.name })}
-        description={t("deactivateBody")}
+        description={t(user.kind === "staff" ? "deactivateStaffBody" : "deactivateBody")}
         confirmLabel={t("deactivate")}
         destructive
         onConfirm={() => deactivate.mutateAsync(undefined)}

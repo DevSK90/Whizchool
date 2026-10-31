@@ -4,6 +4,7 @@ import { ALL_PERMISSIONS, type PermissionKey } from "@whizchool/shared/permissio
 import { CURRICULUM_STREAMS, CURRICULUM_SUBJECTS, optionGroupFor, type OfferedSubject } from "@whizchool/shared/curriculum";
 import { DEFAULT_SCHOOL_DAY, type StoredBlock } from "@whizchool/shared/timetable";
 import { DEFAULT_GRADE_BANDS } from "@whizchool/shared/grading";
+import { staffTypeFor } from "@whizchool/shared/staff";
 import type {
   ClassSection,
   Discount,
@@ -18,6 +19,7 @@ import type {
   PaymentMethod,
   Role,
   Staff,
+  StaffRecord,
   Student,
   Subject,
 } from "@whizchool/shared/types";
@@ -114,7 +116,7 @@ function defaultRoles(): Role[] {
       description: "Oversees the school; approves admissions, results and promotions.",
       permissions: pick(
         "dashboard.view", "admissions.view", "admissions.edit", "admissions.approve", "students.view",
-        "classes.view", "timetable.view", "timetable.edit", "attendance.view", "marks.view", "reportCards.view", "reportCards.edit",
+        "staff.view", "staff.create", "staff.edit", "classes.view", "timetable.view", "timetable.edit", "attendance.view", "marks.view", "reportCards.view", "reportCards.edit",
         "reportCards.approve", "promotions.view", "promotions.approve", "fees.view", "payments.view",
         "messaging.view", "messaging.create", "users.view", "roles.view", "settings.view", "audit.view",
       ),
@@ -208,6 +210,37 @@ function seedTimetables(db: DB, classes: ClassSection[]) {
     });
     db.timetables.push({ classId: c.id, revision: 1, savedBy: "Mrs. Anoma Wijesinghe", ...(live ? { publishedRevision: 1, publishedAt: "2026-01-05T08:00:00+05:30", publishedBy: "Mrs. Anoma Wijesinghe" } : {}) });
   }
+}
+
+/** Non-academic staff without logins, and the rest of everyone's record. Draws no random numbers, so the other demo data stays as it was. */
+function seedStaffRecords(db: DB) {
+  const others: [string, string, string, string, string, string | undefined][] = [
+    ["Mr.", "Sunil", "Abeywardena", "Security Officer", "077 410 2201", undefined],
+    ["Mrs.", "Kamala", "Ekanayake", "Librarian", "071 410 2202", "kamala.ekanayake@whizchool.lk"],
+    ["Mr.", "Nimal", "Gunasekara", "School Van Driver", "076 410 2203", undefined],
+    ["Mrs.", "Sriyani", "Kodikara", "Cleaner", "075 410 2204", undefined],
+    ["Mr.", "Mahesh", "Wickramaarachchi", "Laboratory Assistant", "070 410 2205", "mahesh.wickramaarachchi@whizchool.lk"],
+  ];
+  for (const [title, first, last, designation, phoneNo, email] of others) {
+    const id = nextId(db, "st");
+    db.staff.insert({ id, empNo: `EMP${String(db.counters.st).padStart(3, "0")}`, title, name: `${title} ${first} ${last}`, email, phone: phoneNo, designation, staffType: "non_academic", status: "active" });
+  }
+  const towns = ["Colombo 05", "Nugegoda", "Maharagama", "Dehiwala", "Kottawa", "Battaramulla", "Piliyandala"];
+  db.staff.rows.forEach((s, i) => {
+    const academic = s.staffType === "academic";
+    const year = 1968 + (i * 7) % 30;
+    const day = 10 + (i * 11) % 18;
+    Object.assign(s, {
+      gender: s.title === "Mr." ? "M" : "F",
+      dob: `${year}-${String(1 + (i % 12)).padStart(2, "0")}-${day}`,
+      nic: `${String(year).slice(2)}${String(100 + (i * 13) % 250).padStart(3, "0")}${String(4100 + i).padStart(4, "0")}V`,
+      address: `${12 + i}, Temple Road, ${towns[i % towns.length]}`,
+      joinedOn: `${2008 + (i * 5) % 18}-01-${String(2 + (i % 20)).padStart(2, "0")}`,
+      qualifications: academic ? (i % 2 ? "B.Ed, National Institute of Education" : "B.Sc, University of Colombo; PGDE") : undefined,
+      emergencyName: `${s.title === "Mr." ? "Mrs." : "Mr."} ${s.name.split(" ").at(-1)}`,
+      emergencyPhone: `077 500 ${String(1000 + i)}`,
+    });
+  });
 }
 
 export function createSeed(size: SeedSize = "standard"): DB {
@@ -318,10 +351,10 @@ export function createSeed(size: SeedSize = "standard"): DB {
   const users = db.users;
   const addStaff = (title: string, first: string, last: string, designation: string, email?: string) => {
     const id = nextId(db, "st");
-    const s: Staff = {
+    const s: StaffRecord = {
       id, empNo: `EMP${String(db.counters.st).padStart(3, "0")}`, title, name: `${title} ${first} ${last}`,
       email: email ?? `${first}.${last}`.toLowerCase().replace(/\s+/g, "") + "@whizchool.lk",
-      phone: phone(rng), designation, status: "active",
+      phone: phone(rng), designation, staffType: staffTypeFor(designation), status: "active",
     };
     db.staff.insert(s);
     return s;
@@ -377,11 +410,12 @@ export function createSeed(size: SeedSize = "standard"): DB {
   };
   for (const s of db.staff.rows) {
     const u = addUser({
-      name: s.name, email: s.email, phone: s.phone, kind: "staff", status: "active", roleIds: roleFor(s),
+      name: s.name, email: s.email!, phone: s.phone, kind: "staff", status: "active", roleIds: roleFor(s),
       staffId: s.id, lastLoginAt: at(SEED_DATE, rng.int(7, 15), rng.int(0, 59)),
     });
     s.userId = u.id;
   }
+  seedStaffRecords(db);
 
   // ---------- Classes & subjects ----------
   const subjectId = (code: string) => `sub_${code.toLowerCase()}`;

@@ -2,6 +2,7 @@ import type { Route } from "../router";
 import type { Guardian, ImportPreview, ImportRow, Role } from "@whizchool/shared/types";
 import { ALL_PERMISSIONS, type DataScope, type PermissionKey } from "@whizchool/shared/permissions";
 import { sameGuardianName } from "@whizchool/shared/people";
+import { staffTypeFor } from "@whizchool/shared/staff";
 import { checkImportRow, IMPORT_LIMITS } from "@whizchool/shared/student-import";
 import {
   audit,
@@ -115,7 +116,7 @@ export const adminRoutes: Route[] = [
       if (kind === "staff") {
         const st = db.staff.insert({
           id: nextId(db, "st"), empNo: `EMP${String(db.staff.size + 1).padStart(3, "0")}`, title: "", name: name.trim(),
-          email: email.trim(), phone: phone ?? "", designation: designation?.trim() || "Staff", status: "active",
+          email: email.trim(), phone: phone ?? "", designation: designation?.trim() || "Staff", staffType: staffTypeFor(designation ?? ""), status: "active", joinedOn: todayISO(ctx),
         });
         staffId = st.id;
       }
@@ -158,6 +159,7 @@ export const adminRoutes: Route[] = [
     handler: (ctx) => {
       requirePerm(ctx, "users.edit");
       const u = ctx.db.users.get(ctx.params.id) ?? fail(404, "not_found", "User not found.");
+      if (u.staffId && ctx.db.staff.get(u.staffId)?.status === "inactive") fail(409, "invalid_transition", `${u.name} has left the school. Mark them as back in Staff first.`);
       u.status = u.password ? "active" : "invited";
       audit(ctx, "user.reactivate", "User", `Reactivated ${u.name}`, u.id);
       return { ok: true };

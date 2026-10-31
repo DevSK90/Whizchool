@@ -160,6 +160,7 @@ async function main() {
     ["admin", admin, `/students/${student.id}`],
     ["admin", admin, `/students/${student.id}/attendance`],
     ["admin", admin, `/students/${student.id}/results`],
+    ["admin", admin, "/staff/directory?pageSize=25"],
     ["admin", admin, "/classes"],
     ["admin", admin, `/classes/${big.id}`],
     ["admin", admin, "/timetables/overview"],

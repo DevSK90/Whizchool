@@ -5,6 +5,7 @@ import {
   CalendarDays,
   ClipboardList,
   FileText,
+  Contact,
   GraduationCap,
   History,
   LayoutDashboard,
@@ -25,7 +26,7 @@ import {
 import type { PermissionKey } from "@whizchool/shared/permissions";
 
 export type NavKey =
-  | "dashboard" | "admissions" | "students" | "classes" | "timetables" | "myTimetable" | "attendance" | "exams" | "reportCards" | "promotions"
+  | "dashboard" | "admissions" | "students" | "staff" | "classes" | "timetables" | "myTimetable" | "attendance" | "exams" | "reportCards" | "promotions"
   | "fees" | "invoices" | "payments" | "defaulters" | "feeSettings" | "messaging" | "users" | "roles" | "import"
   | "settings" | "auditLog";
 
@@ -48,6 +49,7 @@ export const STAFF_NAV: NavGroup[] = [
     items: [
       { key: "admissions", href: "/app/admissions", icon: UserPlus, perm: "admissions.view" },
       { key: "students", href: "/app/students", icon: GraduationCap, perm: "students.view" },
+      { key: "staff", href: "/app/staff", icon: Contact, perm: "staff.view" },
       { key: "classes", href: "/app/classes", icon: School, perm: "classes.view" },
     ],
   },

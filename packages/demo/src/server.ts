@@ -7,6 +7,7 @@ import { compile, match } from "./router";
 import { createSeed } from "./seed";
 import { authRoutes } from "./handlers/auth";
 import { schoolRoutes } from "./handlers/school";
+import { staffRoutes } from "./handlers/staff";
 import { studentRoutes } from "./handlers/students";
 import { admissionRoutes } from "./handlers/admissions";
 import { attendanceRoutes } from "./handlers/attendance";
@@ -21,6 +22,7 @@ import { timetableRoutes } from "./handlers/timetables";
 const routes = compile([
   ...authRoutes,
   // Before the routes with :id segments that these paths could otherwise match.
+  ...staffRoutes,
   ...timetableRoutes,
   ...schoolRoutes,
   ...studentRoutes,
