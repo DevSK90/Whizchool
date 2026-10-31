@@ -84,6 +84,9 @@ export interface School {
   currentYearId: ID;
   logoUrl?: string;
   smsSenderId: string;
+  /** The school day on timetables, in minutes since midnight (07:30 is 450). */
+  timetableStart: number;
+  timetableEnd: number;
 }
 
 export interface AcademicYear {
@@ -724,4 +727,131 @@ export interface PortalChild {
   classSize?: number;
   balance: number;
   overdue: number;
+}
+
+// ---------- Timetables ----------
+
+export type TimetableVersion = "draft" | "published";
+export type TimetableBlockKind = "lesson" | "interval" | "activity";
+
+/** A block as the board saves it. Times are minutes since midnight; day is 1 (Monday) to 5 (Friday). */
+export interface TimetableBlockInput {
+  day: number;
+  start: number;
+  end: number;
+  kind: TimetableBlockKind;
+  /** The class's subject, for a lesson. */
+  classSubjectId?: ID;
+  /** The name of an interval or activity, e.g. Assembly. */
+  label?: string;
+  /** Only when it isn't the class's own room, e.g. a lab. */
+  room?: string;
+}
+
+export interface TimetableBlock extends TimetableBlockInput {
+  id: ID;
+  subjectId?: ID;
+  subjectName?: string;
+  /** Short name, for lessons running side by side. */
+  subjectCode?: string;
+  /** O/L elective basket: subjects from one basket can run side by side. */
+  basket?: number;
+  teacherId?: ID;
+  teacherName?: string;
+}
+
+export interface TimetableSubject {
+  /** The class subject's id. */
+  id: ID;
+  subjectId: ID;
+  subjectName: string;
+  subjectCode: string;
+  basket?: number;
+  teacherId?: ID;
+  teacherName?: string;
+}
+
+/** A block of any class, reduced to what clash checks need. */
+export interface PlacedBlock {
+  id: ID;
+  classId: ID;
+  className: string;
+  gradeId: ID;
+  version: TimetableVersion;
+  day: number;
+  start: number;
+  end: number;
+  subjectId?: ID;
+  teacherId?: ID;
+  teacherName?: string;
+  room?: string;
+}
+
+export interface TimetableClash {
+  blockId: ID;
+  kind: "teacher" | "room";
+  day: number;
+  start: number;
+  end: number;
+  otherClassId: ID;
+  otherClassName: string;
+  otherStart: number;
+  otherEnd: number;
+  /** A clash with a published block stops publishing; one with a draft is a warning until that draft goes live. */
+  source: TimetableVersion;
+  message: string;
+}
+
+export interface ClassTimetableView {
+  classId: ID;
+  className: string;
+  gradeId: ID;
+  room?: string;
+  hours: { start: number; end: number };
+  version: TimetableVersion;
+  blocks: TimetableBlock[];
+  subjects: TimetableSubject[];
+  /** Other classes' blocks (draft view only), so the builder can flag clashes while dragging. */
+  busy: PlacedBlock[];
+  clashes: TimetableClash[];
+  /** Goes up with every save; a save must name the revision it started from. */
+  revision: number;
+  publishedRevision?: number;
+  publishedAt?: DateTimeString;
+  publishedBy?: string;
+  savedBy?: string;
+  hasUnpublishedChanges: boolean;
+}
+
+export interface TimetableOverviewRow {
+  classId: ID;
+  className: string;
+  gradeNumber: number;
+  classTeacherName?: string;
+  lessons: number;
+  publishedLessons: number;
+  publishedAt?: DateTimeString;
+  hasUnpublishedChanges: boolean;
+  clashes: number;
+}
+
+export interface TimetablePublishResult {
+  published: { classId: ID; className: string }[];
+  blocked: { classId: ID; className: string; message: string }[];
+}
+
+export interface TeacherTimetable {
+  staffId: ID;
+  staffName: string;
+  hours: { start: number; end: number };
+  blocks: (TimetableBlock & { classId: ID; className: string })[];
+}
+
+export interface StudentTimetable {
+  studentId: ID;
+  classId: ID;
+  className: string;
+  hours: { start: number; end: number };
+  publishedAt?: DateTimeString;
+  blocks: TimetableBlock[];
 }

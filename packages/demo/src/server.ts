@@ -16,9 +16,12 @@ import { commsRoutes } from "./handlers/comms";
 import { adminRoutes } from "./handlers/admin";
 import { dashboardRoutes } from "./handlers/dashboard";
 import { fileRoutes } from "./handlers/files";
+import { timetableRoutes } from "./handlers/timetables";
 
 const routes = compile([
   ...authRoutes,
+  // Before the routes with :id segments that these paths could otherwise match.
+  ...timetableRoutes,
   ...schoolRoutes,
   ...studentRoutes,
   ...admissionRoutes,

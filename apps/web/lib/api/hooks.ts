@@ -74,6 +74,17 @@ export const useSubjects = () => useQuery({ queryKey: ["subjects"], queryFn: () 
 export const useGradeBands = () => useQuery({ queryKey: ["gradeBands"], queryFn: () => api.get<T.GradeBand[]>("/grade-bands"), staleTime: LONG });
 export const useStaff = () => useQuery({ queryKey: ["staff"], queryFn: () => api.get<T.Staff[]>("/staff"), staleTime: LONG });
 
+// ---------- timetables ----------
+
+export const useTimetableOverview = () => useQuery({ queryKey: ["timetables", "overview"], queryFn: () => api.get<T.TimetableOverviewRow[]>("/timetables/overview") });
+export const useClassTimetable = (classId: string, version: T.TimetableVersion) =>
+  useQuery({ queryKey: ["timetable", classId, version], queryFn: () => api.get<T.ClassTimetableView>(`/classes/${classId}/timetable`, { version }) });
+export const useMyTimetable = (enabled = true) => useQuery({ queryKey: ["timetables", "me"], queryFn: () => api.get<T.TeacherTimetable>("/timetables/me"), enabled });
+export const useStaffTimetable = (staffId?: string) =>
+  useQuery({ queryKey: ["timetables", "staff", staffId], queryFn: () => api.get<T.TeacherTimetable>(`/staff/${staffId}/timetable`), enabled: !!staffId });
+export const useStudentTimetable = (studentId: string) =>
+  useQuery({ queryKey: ["timetables", "student", studentId], queryFn: () => api.get<T.StudentTimetable>(`/students/${studentId}/timetable`) });
+
 // ---------- dashboard & portal ----------
 
 export const useDashboard = () =>

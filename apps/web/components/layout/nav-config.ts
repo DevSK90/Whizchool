@@ -1,6 +1,8 @@
 import {
   BookOpenCheck,
   CalendarCheck,
+  CalendarClock,
+  CalendarDays,
   ClipboardList,
   FileText,
   GraduationCap,
@@ -23,7 +25,7 @@ import {
 import type { PermissionKey } from "@whizchool/shared/permissions";
 
 export type NavKey =
-  | "dashboard" | "admissions" | "students" | "classes" | "attendance" | "exams" | "reportCards" | "promotions"
+  | "dashboard" | "admissions" | "students" | "classes" | "timetables" | "myTimetable" | "attendance" | "exams" | "reportCards" | "promotions"
   | "fees" | "invoices" | "payments" | "defaulters" | "feeSettings" | "messaging" | "users" | "roles" | "import"
   | "settings" | "auditLog";
 
@@ -52,6 +54,8 @@ export const STAFF_NAV: NavGroup[] = [
   {
     key: "academics",
     items: [
+      { key: "timetables", href: "/app/timetables", icon: CalendarDays, perm: "timetable.view" },
+      { key: "myTimetable", href: "/app/timetables/me", icon: CalendarClock, perm: "timetable.view" },
       { key: "attendance", href: "/app/attendance", icon: CalendarCheck, perm: "attendance.view" },
       { key: "exams", href: "/app/exams", icon: ClipboardList, perm: "marks.view" },
       { key: "reportCards", href: "/app/report-cards", icon: FileText, perm: "reportCards.view" },

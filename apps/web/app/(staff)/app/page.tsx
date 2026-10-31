@@ -11,7 +11,9 @@ import { PageHeader } from "@/components/shared/page-header";
 import { StatCard } from "@/components/shared/stat-card";
 import { ErrorState, PageSkeleton } from "@/components/shared/states";
 import { StatusBadge } from "@/components/shared/status-badge";
-import { useAttendanceSummary, useDashboard, useExamProgress, useExams, useSchool } from "@/lib/api/hooks";
+import { useSchoolClock } from "@/components/timetable/timetable-board";
+import { useAttendanceSummary, useDashboard, useExamProgress, useExams, useMyTimetable, useSchool } from "@/lib/api/hooks";
+import { formatTimeRange } from "@whizchool/shared/timetable";
 import { useCan, useSession } from "@/lib/auth";
 import { formatDate, formatMoney, formatNumber, formatPeriod } from "@/lib/format";
 
@@ -71,6 +73,7 @@ export default function DashboardPage() {
         )}
       </div>
 
+      {isTeacher && <TodaysClasses />}
       {isTeacher && <TeacherTasks />}
 
       <div className="mt-6 grid gap-6 lg:grid-cols-3">
@@ -182,6 +185,43 @@ export default function DashboardPage() {
         )}
       </div>
     </>
+  );
+}
+
+/** A teacher's lessons today; nothing at weekends. */
+function TodaysClasses() {
+  const t = useTranslations("academics.timetables");
+  const { data } = useMyTimetable();
+  const now = useSchoolClock();
+  if (!data || !now?.day) return null;
+  const lessons = data.blocks.filter((b) => b.day === now.day);
+  return (
+    <Card className="mt-6">
+      <CardHeader>
+        <CardTitle>{t("todayTitle")}</CardTitle>
+        <CardAction>
+          <Button variant="ghost" size="sm" asChild>
+            <Link href="/app/timetables/me">{t("fullWeek")}</Link>
+          </Button>
+        </CardAction>
+      </CardHeader>
+      <CardContent>
+        {lessons.length ? (
+          <ul className="divide-y">
+            {lessons.map((b) => (
+              <li key={b.id} className={`flex flex-wrap items-center gap-x-3 py-2 text-sm ${now.minutes >= b.start && now.minutes < b.end ? "font-medium text-primary" : ""}`}>
+                <span className="tabular w-40 text-muted-foreground">{formatTimeRange(b.start, b.end)}</span>
+                <span>{b.subjectName}</span>
+                <span className="text-muted-foreground">{b.className}</span>
+                {b.room && <span className="text-muted-foreground">{b.room}</span>}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm text-muted-foreground">{t("todayEmpty")}</p>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

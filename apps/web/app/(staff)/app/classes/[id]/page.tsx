@@ -4,7 +4,7 @@ import { use, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { CalendarCheck } from "lucide-react";
+import { CalendarCheck, CalendarDays } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldLabel } from "@/components/ui/field";
@@ -26,6 +26,7 @@ export default function ClassDetailPage({ params }: PageProps<"/app/classes/[id]
   const t = useTranslations("academics.classes");
   const tc = useTranslations("common");
   const ts = useTranslations("students.columns");
+  const tt = useTranslations("academics.timetables");
   const router = useRouter();
   const can = useCan();
   const user = useSession();
@@ -41,13 +42,22 @@ export default function ClassDetailPage({ params }: PageProps<"/app/classes/[id]
         title={`${c.name}${c.streamName ? ` · ${c.streamName}` : ""}`}
         description={`${c.gradeName} · ${t("students", { count: c.studentCount })}${c.classTeacherName ? ` · ${c.classTeacherName}` : ""}`}
         actions={
-          canAttend && (
-            <Button asChild>
-              <Link href={`/app/attendance/${id}`}>
-                <CalendarCheck /> {t("detail.takeAttendance")}
-              </Link>
-            </Button>
-          )
+          <>
+            {can("timetable.view") && (
+              <Button variant="outline" asChild>
+                <Link href={`/app/timetables/${id}`}>
+                  <CalendarDays /> {tt("open")}
+                </Link>
+              </Button>
+            )}
+            {canAttend && (
+              <Button asChild>
+                <Link href={`/app/attendance/${id}`}>
+                  <CalendarCheck /> {t("detail.takeAttendance")}
+                </Link>
+              </Button>
+            )}
+          </>
         }
       />
       <div className="grid gap-6 lg:grid-cols-3">

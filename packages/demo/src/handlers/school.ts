@@ -13,6 +13,7 @@ import {
   type Ctx,
 } from "../helpers";
 import { nextId, type DB } from "../db";
+import { checkReassignment, checkSchoolHours } from "./timetables";
 
 function toClassSummary(db: DB, c: DB["classes"]["rows"][number]): ClassSummary {
   const grade = db.grades.get(c.gradeId)!;
@@ -81,14 +82,19 @@ export const schoolRoutes: Route[] = [
     path: "/settings/school",
     handler: (ctx) => {
       requirePerm(ctx, "settings.edit");
-      const { name, shortName, motto, address, phone, email, website, principalName, smsSenderId } = ctx.body ?? {};
+      const { name, shortName, motto, address, phone, email, website, principalName, smsSenderId, timetableStart, timetableEnd } = ctx.body ?? {};
       const f: Record<string, string> = {};
       if (!name?.trim()) f.name = "Required";
       if (!shortName?.trim()) f.shortName = "Required";
       if (email && !EMAIL.test(email)) f.email = "Enter a valid email";
       if (!/^[A-Za-z0-9]{3,11}$/.test(smsSenderId ?? "")) f.smsSenderId = "3–11 letters or digits, no spaces.";
+      const dayStart = timetableStart ?? ctx.db.school.timetableStart;
+      const dayEnd = timetableEnd ?? ctx.db.school.timetableEnd;
+      if (dayStart % 5 || dayEnd % 5 || dayEnd <= dayStart) f.timetableEnd = "Enter a finish after the start, in 5-minute steps";
       if (Object.keys(f).length) fail(422, "validation", "Please fix the highlighted fields.", f);
+      checkSchoolHours(ctx.db, dayStart, dayEnd);
       Object.assign(ctx.db.school, {
+        timetableStart: dayStart, timetableEnd: dayEnd,
         name: name.trim(), shortName: shortName.trim(), motto: motto ?? "", address: address ?? "", phone: phone ?? "", email: email ?? "",
         website: website || undefined, principalName: principalName ?? "", smsSenderId: smsSenderId.toUpperCase(),
       });
@@ -224,6 +230,7 @@ export const schoolRoutes: Route[] = [
       const cs = ctx.db.classSubjects.get(ctx.params.id) ?? fail(404, "not_found", "Not found.");
       const teacherId = ctx.body?.teacherId || undefined;
       if (teacherId && ctx.db.staff.get(teacherId)?.status !== "active") fail(422, "validation", "Choose an active staff member.", { teacherId: "Choose an active staff member" });
+      checkReassignment(ctx.db, cs!.id, teacherId);
       cs!.teacherId = teacherId;
       audit(ctx, "class.teacher", "Class", `Assigned ${ctx.db.staff.get(cs!.teacherId)?.name ?? "no teacher"} to ${ctx.db.subjects.get(cs!.subjectId)?.name} in ${ctx.db.classes.get(cs!.classId)?.name}`);
       return cs;

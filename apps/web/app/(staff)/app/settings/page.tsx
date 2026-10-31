@@ -20,6 +20,7 @@ import { ErrorState, PageSkeleton } from "@/components/shared/states";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { api, ApiError } from "@/lib/api/client";
 import { useApiMutation, useExams, useGradeBands, useSchool, useSubjects, useTerms, useYears } from "@/lib/api/hooks";
+import { parseTime, toTimeValue } from "@whizchool/shared/timetable";
 import type { GradeBand, GradeLevel, School, Subject } from "@whizchool/shared/types";
 import { useCan } from "@/lib/auth";
 import { formatDate } from "@/lib/format";
@@ -90,6 +91,24 @@ function SchoolProfile() {
           <div className="grid gap-4 sm:grid-cols-2">
             {field("principalName", t("principal"))}
             {field("smsSenderId", t("smsSender"), t("smsSenderHint"))}
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {(["timetableStart", "timetableEnd"] as const).map((key) => (
+              <Field key={key} data-invalid={!!errors[key]}>
+                <FieldLabel htmlFor={`s-${key}`}>{t(key)}</FieldLabel>
+                <Input
+                  id={`s-${key}`}
+                  type="time"
+                  step={300}
+                  value={toTimeValue(form[key])}
+                  disabled={!editable}
+                  onChange={(e) => setForm({ ...form, [key]: parseTime(e.target.value) ?? form[key] })}
+                  aria-invalid={!!errors[key]}
+                />
+                {key === "timetableStart" && <FieldDescription>{t("timetableHint")}</FieldDescription>}
+                <FieldError>{errors[key]}</FieldError>
+              </Field>
+            ))}
           </div>
           {editable && (
             <div className="flex justify-end">

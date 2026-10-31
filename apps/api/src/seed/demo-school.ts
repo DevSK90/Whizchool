@@ -98,6 +98,11 @@ export async function seedDemoSchool(db: Db, size: SeedSize = "standard") {
     demo.classes.rows.map((c) => ({ ...c, streamId: c.streamId ?? null, classTeacherId: c.classTeacherId ?? null, room: c.room ?? null })),
   );
   await insert(db.classSubject, demo.classSubjects.rows.map((cs) => ({ ...cs, teacherId: cs.teacherId ?? null })));
+  await insert(
+    db.classTimetable,
+    demo.timetables.map((t) => ({ ...t, publishedAt: opt(t.publishedAt, at), publishedRevision: t.publishedRevision ?? null, publishedBy: t.publishedBy ?? null, savedBy: t.savedBy ?? null })),
+  );
+  await insert(db.timetableBlock, demo.timetableBlocks.map((b) => ({ ...b, classSubjectId: b.classSubjectId ?? null, label: b.label ?? null, room: b.room ?? null })));
 
   // ── Students ──
   await insert(

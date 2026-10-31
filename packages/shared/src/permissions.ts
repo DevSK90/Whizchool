@@ -9,6 +9,7 @@ export const PERMISSION_MODULES = {
   admissions: ["view", "create", "edit", "approve"],
   students: ["view", "create", "edit"],
   classes: ["view", "create", "edit"],
+  timetable: ["view", "edit"],
   attendance: ["view", "create", "edit"],
   marks: ["view", "create", "edit"],
   reportCards: ["view", "edit", "approve"],

@@ -63,6 +63,16 @@ describe("year-end promotions", () => {
     expect(revised).toMatchObject({ repeated: 1, left: 1 });
     const years: Json[] = await get("/academic-years");
     expect(years.find((y) => y.name === "2027")).toMatchObject({ status: "upcoming" });
+
+    // Next year starts from a copy of this year's timetable, unpublished and using next year's subjects.
+    const nextClass = (await get("/classes", { yearId: years.find((y) => y.name === "2027").id })).find((c: Json) => c.name === "10-A");
+    const thisClass = (await get("/classes")).find((c: Json) => c.name === "10-A");
+    const [copied, original] = await Promise.all([get(`/classes/${nextClass.id}/timetable`), get(`/classes/${thisClass.id}/timetable`)]);
+    expect(copied.blocks.length).toBe(original.blocks.length);
+    expect(copied).toMatchObject({ hasUnpublishedChanges: true });
+    expect(copied.publishedAt).toBeUndefined();
+    const nextSubjects = new Set(copied.subjects.map((x: Json) => x.id));
+    expect(copied.blocks.filter((b: Json) => b.kind === "lesson").every((b: Json) => nextSubjects.has(b.classSubjectId))).toBe(true);
   });
 
   it("starts the new year: students move into their new classes", async () => {

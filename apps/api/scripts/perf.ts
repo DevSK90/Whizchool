@@ -64,7 +64,7 @@ type Json = any; // eslint-disable-line @typescript-eslint/no-explicit-any -- lo
  */
 function client(base: URL, cookie = "") {
   const agent = new http.Agent({ keepAlive: true, maxSockets: 1 });
-  const call = (path: string, method = "GET", payload?: unknown) =>
+  const call = (path: string, method = "GET", payload?: unknown): Promise<Json> =>
     new Promise<Json>((resolve, reject) => {
       const body = payload === undefined ? undefined : JSON.stringify(payload);
       const req = http.request(
@@ -82,7 +82,11 @@ function client(base: URL, cookie = "") {
           });
         },
       );
-      req.on("error", reject);
+      req.on("error", (e: NodeJS.ErrnoException) => {
+        // The server closes idle keep-alive connections after 5 s; a user who sat out a few calls can hit that.
+        if (e.code === "ECONNRESET" && method === "GET") call(path, method, payload).then(resolve, reject);
+        else reject(e);
+      });
       req.end(body);
     });
   return {
@@ -158,6 +162,10 @@ async function main() {
     ["admin", admin, `/students/${student.id}/results`],
     ["admin", admin, "/classes"],
     ["admin", admin, `/classes/${big.id}`],
+    ["admin", admin, "/timetables/overview"],
+    ["admin", admin, `/classes/${big.id}/timetable`],
+    ["teacher", teacher, "/timetables/me"],
+    ["parent", parent, `/students/${(await parent.get("/portal/children"))[0].id}/timetable`],
     ["admin", admin, "/attendance/summary"],
     ["teacher", teacher, `/attendance?classId=${myClass}`],
     ["admin", admin, "/exams"],

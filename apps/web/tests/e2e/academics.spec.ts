@@ -6,7 +6,9 @@ test("teacher marks attendance and submits a marks sheet", async ({ page }) => {
   await page.waitForURL(/\/app\/attendance\//);
   await page.getByRole("radio", { name: "Absent" }).first().click();
   await page.getByRole("button", { name: /Save attendance/ }).click();
-  await expect(page.getByText(/absence SMS queued/)).toBeVisible();
+  // Parents are only texted about today's register; at weekends the page opens on Friday's.
+  const weekend = [0, 6].includes(new Date().getDay());
+  await expect(page.getByText(weekend ? /No absence SMS needed/ : /absence SMS queued/)).toBeVisible();
 
   await open(page, "/app/exams/exam_2026_3/marks?classId=cls_2026_10b&subjectId=sub_mat");
   const inputs = page.locator("tbody input");

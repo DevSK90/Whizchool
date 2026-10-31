@@ -21,6 +21,7 @@ import { roleRoutes } from "./roles";
 import { schoolRoutes } from "./school";
 import { studentRoutes } from "./students";
 import { testSupportRoutes } from "./test-support";
+import { timetableRoutes } from "./timetables";
 import { userRoutes } from "./users";
 
 /** Every /api/v1 route. Access-matrix tests iterate over this list. */
@@ -33,6 +34,7 @@ export const routes: RouteDef<any, any>[] = [
   ...auditLogRoutes,
   ...schoolRoutes,
   ...classRoutes,
+  ...timetableRoutes,
   ...studentRoutes,
   ...fileRoutes,
   ...admissionRoutes,

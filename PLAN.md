@@ -10,7 +10,7 @@ Repo today: `frontend/` (Next.js 16.4.3 scaffold, own `.git`) and `backend/` (Ex
 ## 1. Product & scope
 - **Customer:** one school now, built for resale. Every school-specific rule (branding, grade bands, terms, fee types, report-card text) is a setting, never hard-coded.
 - **Must-fix pains:** (1) results and report cards, (2) fee collection, (3) admissions and student records.
-- **v1.0 (target in 3–6 months, roughly Feb–Apr 2027):** admissions, student/guardian records, class allocation, attendance + SMS/email alerts, term results + report cards, fees + PayHere, parent portal, year-end promotions.
+- **v1.0 (target in 3–6 months, roughly Feb–Apr 2027):** admissions, student/guardian records, class allocation, attendance + SMS/email alerts, term results + report cards, fees + PayHere, parent portal, year-end promotions, class timetables.
 - **v1.1:** HR + payroll (EPF/ETF/APIT) + accounting ledger, and online exams/tests (which bring student logins).
 - **Out of scope for v1:** e-learning/LMS, scratch-card login, library, transport, hostel, inventory, full school website/CMS, staff 2FA, native mobile app, real-time updates, late-payment fines.
 - **v2 seams to preserve:** multi-school SaaS (a single `School` + settings entity so a `schoolId` can be added later) and e-learning (reuse the subject–class–teacher mapping and the file storage).
@@ -29,12 +29,13 @@ Repo today: `frontend/` (Next.js 16.4.3 scaffold, own `.git`) and `backend/` (Ex
 5. **Attendance:** the class teacher marks daily attendance, and parents of absent students get an SMS. Admins can send bulk SMS/email notices by grade, class or role.
 6. **Year end:** the admin opens a new academic year, the system proposes a bulk promotion (+1 grade; Grade 11 → left/A/L intake; Grade 13 → graduated), the admin adjusts repeaters and sections, then confirms. Class history is kept.
 7. **Parent (returning, mobile):** dashboard with a child switcher showing attendance, latest results, fee balance with a pay button, and notices.
+9. **Timetables:** staff drag subjects onto a Monday–Friday board covering the school day (07:30–13:30 by default, a setting), one board per class per academic year, as one weekly pattern repeating all year. Save keeps a draft; publishing shows it to the class's teachers and parents. A teacher or room clash with another class is flagged as you drag and blocks publishing. Teachers get "My timetable" and a "today's classes" card; parents get a Timetable tab per child, with only that child's O/L electives.
 8. **Data onboarding:** **CSV/Excel import** of existing students, guardians and classes, with a validation preview and an error report.
 
 ## 4. Pages & routing (Next.js App Router)
 - **Public:** `/`, `/apply`, `/apply/status`, `/login`, `/forgot-password`, `/reset-password`, `/invite/[token]`. Only `/` and `/apply` are SEO-indexed; everything else is `noindex`.
-- **Staff (`/app/...`, desktop-first):** dashboard, admissions, students `[id]`, classes, attendance, exams/marks, report cards, fees (invoices, payments, structures, defaulters), messaging, settings (school, academic years, terms, grades/sections/streams, subjects, grade bands, fee types), users & roles (permission matrix), import, audit log.
-- **Parent portal (`/portal/...`, mobile-first):** home, child `[id]` (attendance, results, report-card PDFs, fees/pay), notices, profile.
+- **Staff (`/app/...`, desktop-first):** dashboard, admissions, students `[id]`, classes, timetables (overview, `[classId]` builder, my timetable), attendance, exams/marks, report cards, fees (invoices, payments, structures, defaulters), messaging, settings (school, academic years, terms, grades/sections/streams, subjects, grade bands, fee types), users & roles (permission matrix), import, audit log.
+- **Parent portal (`/portal/...`, mobile-first):** home, child `[id]` (timetable, attendance, results, report-card PDFs, fees/pay), notices, profile.
 - Route protection uses an auth check in Next middleware (redirect only). **Every permission is enforced in Express.**
 
 ## 5. UI
@@ -46,6 +47,7 @@ Repo today: `frontend/` (Next.js 16.4.3 scaffold, own `.git`) and `backend/` (Ex
 **Settings/academics:** School (singleton, with settings JSON + branding), AcademicYear, Term (3 per year), Grade (1–13), Stream (A/L), Section/Class (grade + section + year + class teacher), Subject, ClassSubject (class × subject × teacher), GradeBand (A 75–100, B 65–74, C 50–64, S 35–49, W 0–34, editable).
 **People:** User (email unique, status), Role, Permission, UserRole (with an optional scope), Session, Invite; Staff (profile linked to a User); Student (admission no. unique, status: active/left/graduated/expelled, leaving date); Guardian (linked to a User); StudentGuardian (many-to-many, relationship, primary-contact flag); Enrollment (student × class × year, class history); StudentSubject (O/L electives and A/L stream subjects).
 **Admissions:** Application (reference no. unique, stage, data), ApplicationDocument.
+**Timetables:** ClassTimetable (one per class: revision, published revision, who and when), TimetableBlock (class, draft or published, day 1–5, start and end minutes, lesson/interval/activity, class subject, label, room). Teacher and subject come live through ClassSubject. School holds the day's start and end.
 **Attendance:** AttendanceRecord (student × date unique; status present/absent/late/excused).
 **Exams:** Exam (term test per term/grade), Mark (student × exam × subject unique; 0–100 or AB for absent), ReportCard (status draft → approved → released; remarks; computed totals/averages/rank snapshot; PDF file).
 **Fees:** FeeType (recurrence: monthly/one-time/ad-hoc), FeeStructure (grade × fee type × amount × year), Discount and StudentDiscount, Invoice + InvoiceLine, Payment (method, reference, PayHere order ID unique), PaymentAllocation, Receipt.

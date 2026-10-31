@@ -158,7 +158,8 @@
       "roles": "Roles",
       "settings": "Settings",
       "import": "Import",
-      "audit": "Audit log"
+      "audit": "Audit log",
+      "timetable": "Timetables"
     },
     "adminLocked": "The Admin role always has full access.",
     "save": "Save role",
@@ -290,7 +291,10 @@
       "principal": "Principal's name",
       "smsSender": "SMS sender ID",
       "smsSenderHint": "3–11 letters or digits. Must be registered with the SMS provider.",
-      "saved": "School profile saved."
+      "saved": "School profile saved.",
+      "timetableStart": "School day starts",
+      "timetableEnd": "School day ends",
+      "timetableHint": "The hours timetables cover."
     },
     "calendar": {
       "year": "Academic year {name}",

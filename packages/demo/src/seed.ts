@@ -1,6 +1,7 @@
 // Deterministic demo dataset: a ~670-student private school (Grades 1–13, A/L streams) for 2026.
 import { addDays, format, getDay, parseISO } from "date-fns";
 import { ALL_PERMISSIONS, type PermissionKey } from "@whizchool/shared/permissions";
+import { DEFAULT_SCHOOL_DAY, type StoredBlock } from "@whizchool/shared/timetable";
 import { DEFAULT_GRADE_BANDS } from "@whizchool/shared/grading";
 import type {
   ClassSection,
@@ -136,7 +137,7 @@ function defaultRoles(): Role[] {
       description: "Oversees the school; approves admissions, results and promotions.",
       permissions: pick(
         "dashboard.view", "admissions.view", "admissions.edit", "admissions.approve", "students.view",
-        "classes.view", "attendance.view", "marks.view", "reportCards.view", "reportCards.edit",
+        "classes.view", "timetable.view", "timetable.edit", "attendance.view", "marks.view", "reportCards.view", "reportCards.edit",
         "reportCards.approve", "promotions.view", "promotions.approve", "fees.view", "payments.view",
         "messaging.view", "messaging.create", "users.view", "roles.view", "settings.view", "audit.view",
       ),
@@ -145,14 +146,14 @@ function defaultRoles(): Role[] {
       id: "role_class_teacher", name: "Class Teacher", system: true, scope: "own_class",
       description: "Marks attendance and writes report-card remarks for their own class.",
       permissions: pick(
-        "dashboard.view", "students.view", "classes.view", "attendance.view", "attendance.create",
+        "dashboard.view", "students.view", "classes.view", "timetable.view", "attendance.view", "attendance.create",
         "attendance.edit", "marks.view", "reportCards.view", "reportCards.edit", "messaging.view",
       ),
     },
     {
       id: "role_subject_teacher", name: "Subject Teacher", system: true, scope: "own_subjects",
       description: "Enters term-test marks for the subjects and classes they teach.",
-      permissions: pick("dashboard.view", "students.view", "classes.view", "marks.view", "marks.create", "marks.edit"),
+      permissions: pick("dashboard.view", "students.view", "classes.view", "timetable.view", "marks.view", "marks.create", "marks.edit"),
     },
     {
       id: "role_accountant", name: "Accountant", system: true, scope: "all",
@@ -172,7 +173,7 @@ function defaultRoles(): Role[] {
       description: "Front-office: admissions and student records.",
       permissions: pick(
         "dashboard.view", "admissions.view", "admissions.create", "admissions.edit", "students.view",
-        "students.create", "students.edit", "classes.view", "import.create",
+        "students.create", "students.edit", "classes.view", "timetable.view", "import.create",
       ),
     },
   ];
@@ -183,6 +184,54 @@ function defaultRoles(): Role[] {
  * fuller classes, about 1,600 students, for checking the API's speed at a big school's size.
  */
 export type SeedSize = "standard" | "large";
+
+/**
+ * Every class gets a clash-free week of 40-minute lessons, placed greedily and without the seed's random
+ * numbers so everything generated before it stays the same. One class (8-B) stays an unpublished draft.
+ */
+function seedTimetables(db: DB, classes: ClassSection[]) {
+  const dayStart = DEFAULT_SCHOOL_DAY.start;
+  const firstLessons = dayStart + 10;
+  const interval = { start: firstLessons + 4 * 40, end: firstLessons + 4 * 40 + 30 };
+  const lessonStarts = [0, 1, 2, 3].map((i) => firstLessons + i * 40).concat([0, 1, 2, 3].map((i) => interval.end + i * 40));
+  const teacherBusy = new Set<string>();
+  for (const c of classes) {
+    const subjects = db.classSubjects.rows.filter((cs) => cs.classId === c.id);
+    // A basket's subjects run together, so they're placed as one unit.
+    const units = new Map<string, typeof subjects>();
+    for (const cs of subjects) {
+      const basket = db.subjects.get(cs.subjectId)?.basket;
+      const key = basket == null ? cs.id : `basket${basket}`;
+      units.set(key, [...(units.get(key) ?? []), cs]);
+    }
+    const rotation = [...units.values()];
+    const blocks: Omit<StoredBlock, "id" | "version">[] = [];
+    let next = 0;
+    for (const day of [1, 2, 3, 4, 5]) {
+      blocks.push({ classId: c.id, day, start: dayStart, end: firstLessons, kind: "activity", label: "Assembly" });
+      blocks.push({ classId: c.id, day, start: interval.start, end: interval.end, kind: "interval", label: "Interval" });
+      const today = new Map<(typeof subjects)[number][], number>();
+      for (const start of lessonStarts) {
+        for (let tried = 0; tried < rotation.length; tried++) {
+          const unit = rotation[(next + tried) % rotation.length]!;
+          const keys = unit.flatMap((cs) => (cs.teacherId ? [`${cs.teacherId}|${day}|${start}`] : []));
+          if ((today.get(unit) ?? 0) >= 2 || keys.some((k) => teacherBusy.has(k))) continue;
+          for (const k of keys) teacherBusy.add(k);
+          for (const cs of unit) blocks.push({ classId: c.id, day, start, end: start + 40, kind: "lesson", classSubjectId: cs.id });
+          today.set(unit, (today.get(unit) ?? 0) + 1);
+          next = (next + tried + 1) % rotation.length;
+          break;
+        }
+      }
+    }
+    const live = c.name !== "8-B";
+    blocks.forEach((b, i) => {
+      db.timetableBlocks.push({ ...b, id: `ttb_${c.id.slice(4)}_d${i}`, version: "draft" });
+      if (live) db.timetableBlocks.push({ ...b, id: `ttb_${c.id.slice(4)}_p${i}`, version: "published" });
+    });
+    db.timetables.push({ classId: c.id, revision: 1, savedBy: "Mrs. Anoma Wijesinghe", ...(live ? { publishedRevision: 1, publishedAt: "2026-01-05T08:00:00+05:30", publishedBy: "Mrs. Anoma Wijesinghe" } : {}) });
+  }
+}
 
 export function createSeed(size: SeedSize = "standard"): DB {
   const large = size === "large";
@@ -202,6 +251,8 @@ export function createSeed(size: SeedSize = "standard"): DB {
       timezone: "Asia/Colombo",
       currentYearId: "year_2026",
       smsSenderId: "WHIZCHOOL",
+      timetableStart: DEFAULT_SCHOOL_DAY.start,
+      timetableEnd: DEFAULT_SCHOOL_DAY.end,
     },
     years: new Table([
       { id: "year_2025", name: "2025", startDate: "2025-01-02", endDate: "2025-12-05", status: "closed" },
@@ -226,6 +277,8 @@ export function createSeed(size: SeedSize = "standard"): DB {
       })),
     ),
     classSubjects: new Table(),
+    timetables: [],
+    timetableBlocks: [],
     gradeBands: DEFAULT_GRADE_BANDS.map((b) => ({ ...b })),
     staff: new Table(),
     guardians: new Table(),
@@ -775,5 +828,6 @@ export function createSeed(size: SeedSize = "standard"): DB {
   }
   db.audit.rows.sort((a, b) => b.at.localeCompare(a.at));
 
+  seedTimetables(db, classes2026);
   return db;
 }

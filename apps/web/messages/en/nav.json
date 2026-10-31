@@ -37,5 +37,7 @@
   },
   "openMenu": "Open menu",
   "toggleSidebar": "Toggle sidebar",
-  "skipToContent": "Skip to content"
+  "skipToContent": "Skip to content",
+  "timetables": "Timetables",
+  "myTimetable": "My timetable"
 }

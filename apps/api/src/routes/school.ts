@@ -29,6 +29,8 @@ export function toSchool(s: SchoolRow): School {
     timezone: s.timezone,
     currentYearId: s.currentYearId ?? "",
     smsSenderId: s.smsSenderId,
+    timetableStart: s.timetableStart,
+    timetableEnd: s.timetableEnd,
   });
 }
 
@@ -74,6 +76,8 @@ const schoolBody = z.object({
     .string()
     .trim()
     .regex(/^[A-Za-z0-9]{3,11}$/, "3–11 letters or digits, no spaces."),
+  timetableStart: z.number().int().min(0).max(1440).multipleOf(5).optional(),
+  timetableEnd: z.number().int().min(0).max(1440).multipleOf(5, "Use 5-minute steps").optional(),
 });
 
 const termDates = z.object({ startDate: isoDate(), endDate: isoDate() });
@@ -148,6 +152,13 @@ export const schoolRoutes = [
     body: schoolBody,
     handler: async ({ auth, body }) => {
       const before = await prisma.school.findUniqueOrThrow({ where: { id: "school" } });
+      const dayStart = body.timetableStart ?? before.timetableStart;
+      const dayEnd = body.timetableEnd ?? before.timetableEnd;
+      if (dayEnd <= dayStart) throw new ApiError(422, "validation", "Please fix the highlighted fields.", { timetableEnd: "The school day must end after it starts" });
+      const outside = await prisma.timetableBlock.count({
+        where: { class: { yearId: before.currentYearId ?? undefined }, OR: [{ start: { lt: dayStart } }, { end: { gt: dayEnd } }] },
+      });
+      if (outside) throw new ApiError(409, "timetable_hours", "Some timetables have blocks outside those hours. Move them first.", { timetableEnd: "Timetables use times outside these hours" });
       const data = { ...body, website: body.website || null, smsSenderId: body.smsSenderId.toUpperCase() };
       const updated = await prisma.$transaction(async (tx) => {
         const updated = await tx.school.update({ where: { id: "school" }, data });

@@ -20,21 +20,24 @@ datasource db {
 
 /// Singleton row (id = "school"). School-specific rules live here, never in code.
 model School {
-  id            String   @id @default("school")
-  name          String
-  shortName     String
-  motto         String   @default("")
-  address       String
-  phone         String
-  email         String
-  website       String?
-  principalName String
-  currency      String   @default("LKR")
-  timezone      String   @default("Asia/Colombo")
-  smsSenderId   String
-  logoFileId    String?
-  currentYearId String?
-  updatedAt     DateTime @updatedAt @db.Timestamptz(3)
+  id             String   @id @default("school")
+  name           String
+  shortName      String
+  motto          String   @default("")
+  address        String
+  phone          String
+  email          String
+  website        String?
+  principalName  String
+  currency       String   @default("LKR")
+  timezone       String   @default("Asia/Colombo")
+  smsSenderId    String
+  logoFileId     String?
+  currentYearId  String?
+  /// The school day on timetables, in minutes since midnight (07:30 and 13:30).
+  timetableStart Int      @default(450)
+  timetableEnd   Int      @default(810)
+  updatedAt      DateTime @updatedAt @db.Timestamptz(3)
 
   currentYear AcademicYear? @relation(fields: [currentYearId], references: [id])
 }
@@ -117,17 +120,19 @@ model ClassSection {
   classTeacherId String?
   room           String?
 
-  year         AcademicYear   @relation(fields: [yearId], references: [id])
-  grade        Grade          @relation(fields: [gradeId], references: [id])
-  stream       Stream?        @relation(fields: [streamId], references: [id])
-  classTeacher Staff?         @relation(fields: [classTeacherId], references: [id])
-  subjects     ClassSubject[]
-  students     Student[]
-  enrollments  Enrollment[]
-  attendance   AttendanceDay[]
-  markSheets   MarkSheet[]
-  classReports ClassReport[]
-  reportCards  ReportCard[]
+  year            AcademicYear     @relation(fields: [yearId], references: [id])
+  grade           Grade            @relation(fields: [gradeId], references: [id])
+  stream          Stream?          @relation(fields: [streamId], references: [id])
+  classTeacher    Staff?           @relation(fields: [classTeacherId], references: [id])
+  subjects        ClassSubject[]
+  timetable       ClassTimetable?
+  timetableBlocks TimetableBlock[]
+  students        Student[]
+  enrollments     Enrollment[]
+  attendance      AttendanceDay[]
+  markSheets      MarkSheet[]
+  classReports    ClassReport[]
+  reportCards     ReportCard[]
 
   @@unique([yearId, name])
   @@index([classTeacherId])
@@ -166,12 +171,61 @@ model ClassSubject {
   subjectId String
   teacherId String?
 
-  class   ClassSection @relation(fields: [classId], references: [id], onDelete: Cascade)
-  subject Subject      @relation(fields: [subjectId], references: [id])
-  teacher Staff?       @relation(fields: [teacherId], references: [id])
+  class           ClassSection     @relation(fields: [classId], references: [id], onDelete: Cascade)
+  subject         Subject          @relation(fields: [subjectId], references: [id])
+  teacher         Staff?           @relation(fields: [teacherId], references: [id])
+  timetableBlocks TimetableBlock[]
 
   @@unique([classId, subjectId])
   @@index([teacherId])
+}
+
+// ───────────────────────────── Timetables ─────────────────────────────
+
+/// One class's weekly pattern for its academic year. Saving raises `revision`; publishing records which one went live.
+model ClassTimetable {
+  classId           String    @id
+  revision          Int       @default(0)
+  publishedRevision Int?
+  publishedAt       DateTime? @db.Timestamptz(3)
+  publishedBy       String?
+  savedBy           String?
+
+  class ClassSection @relation(fields: [classId], references: [id], onDelete: Cascade)
+}
+
+enum TimetableVersion {
+  draft
+  published
+}
+
+enum TimetableBlockKind {
+  lesson
+  interval
+  activity
+}
+
+/// A lesson, interval or activity on a class's board. Teacher and subject come through the class subject.
+model TimetableBlock {
+  id             String             @id @default(uuid(7))
+  classId        String
+  version        TimetableVersion
+  /// 1 (Monday) to 5 (Friday).
+  day            Int
+  /// Minutes since midnight.
+  start          Int
+  end            Int
+  kind           TimetableBlockKind
+  classSubjectId String?
+  label          String?
+  /// Only when it isn't the class's own room.
+  room           String?
+
+  class        ClassSection  @relation(fields: [classId], references: [id], onDelete: Cascade)
+  classSubject ClassSubject? @relation(fields: [classSubjectId], references: [id], onDelete: Cascade)
+
+  @@index([classId, version])
+  @@index([classSubjectId])
 }
 
 /// Editable grading scale (A 75–100, B 65–74, C 50–64, S 35–49, W 0–34 by default).
@@ -367,9 +421,9 @@ model Student {
   photoFileId      String?
   createdAt        DateTime      @default(now()) @db.Timestamptz(3)
 
-  class         ClassSection      @relation(fields: [classId], references: [id])
-  grade         Grade             @relation(fields: [gradeId], references: [id])
-  photo         FileObject?       @relation("StudentPhoto", fields: [photoFileId], references: [id])
+  class         ClassSection       @relation(fields: [classId], references: [id])
+  grade         Grade              @relation(fields: [gradeId], references: [id])
+  photo         FileObject?        @relation("StudentPhoto", fields: [photoFileId], references: [id])
   guardians     StudentGuardian[]
   enrollments   Enrollment[]
   subjects      StudentSubject[]
@@ -665,7 +719,7 @@ model ClassReport {
 
 /// Per-student remarks, plus the result snapshot frozen at approval.
 model ReportCard {
-  id                 String  @id @default(uuid(7))
+  id                 String   @id @default(uuid(7))
   examId             String
   studentId          String
   classTeacherRemark String?
@@ -688,18 +742,18 @@ model ReportCard {
 }
 
 model PromotionRun {
-  id         String   @id @default(uuid(7))
+  id         String    @id @default(uuid(7))
   fromYearId String
   toYearId   String
   promoted   Int
   repeated   Int
   left       Int
   graduated  Int
-  at         DateTime @default(now()) @db.Timestamptz(3)
+  at         DateTime  @default(now()) @db.Timestamptz(3)
   byId       String?
   /// Students leaving or graduating at the year end: { [studentId]: "leave" | "graduate" }.
   /// Promoted and repeating students have an Enrollment in the new year instead.
-  decisions  Json     @default("{}")
+  decisions  Json      @default("{}")
   /// When the new year was started (students moved into their new classes). Until then the plan can be revised.
   startedAt  DateTime? @db.Timestamptz(3)
 
@@ -799,9 +853,9 @@ model Invoice {
   voidReason String?
   createdAt  DateTime      @default(now()) @db.Timestamptz(3)
 
-  student      Student               @relation(fields: [studentId], references: [id])
-  lines        InvoiceLine[]
-  allocations  PaymentAllocation[]
+  student       Student               @relation(fields: [studentId], references: [id])
+  lines         InvoiceLine[]
+  allocations   PaymentAllocation[]
   orderInvoices PayHereOrderInvoice[]
 
   @@index([studentId, dueDate])
@@ -881,19 +935,19 @@ enum PayHereOrderStatus {
 
 /// An online checkout. Only the verified notify webhook moves it out of "pending".
 model PayHereOrder {
-  id           String             @id
-  studentId    String
-  amount       Decimal            @db.Decimal(12, 2)
-  status       PayHereOrderStatus @default(pending)
-  createdById  String?
-  createdAt    DateTime           @default(now()) @db.Timestamptz(3)
-  expiresAt    DateTime           @db.Timestamptz(3)
-  completedAt  DateTime?          @db.Timestamptz(3)
+  id               String             @id
+  studentId        String
+  amount           Decimal            @db.Decimal(12, 2)
+  status           PayHereOrderStatus @default(pending)
+  createdById      String?
+  createdAt        DateTime           @default(now()) @db.Timestamptz(3)
+  expiresAt        DateTime           @db.Timestamptz(3)
+  completedAt      DateTime?          @db.Timestamptz(3)
   /// PayHere's payment_id and status_code from the notify webhook.
   payherePaymentId String?
-  statusCode   Int?
-  notifyPayload Json?
-  paymentId    String?            @unique
+  statusCode       Int?
+  notifyPayload    Json?
+  paymentId        String?            @unique
 
   student  Student               @relation(fields: [studentId], references: [id])
   payment  Payment?              @relation(fields: [paymentId], references: [id])
@@ -981,19 +1035,19 @@ enum DeliveryStatus {
 
 /// One recipient of a message; retried by the job queue on provider errors.
 model MessageDelivery {
-  id         String         @id @default(uuid(7))
-  messageId  String
-  to         String
+  id            String         @id @default(uuid(7))
+  messageId     String
+  to            String
   /// Personalised text for this recipient; the message body is used when empty.
-  body       String?
-  studentId  String?
-  guardianId String?
-  status     DeliveryStatus @default(queued)
-  attempts   Int            @default(0)
-  providerId String?
-  error      String?
-  sentAt     DateTime?      @db.Timestamptz(3)
-  lastAttemptAt DateTime?   @db.Timestamptz(3)
+  body          String?
+  studentId     String?
+  guardianId    String?
+  status        DeliveryStatus @default(queued)
+  attempts      Int            @default(0)
+  providerId    String?
+  error         String?
+  sentAt        DateTime?      @db.Timestamptz(3)
+  lastAttemptAt DateTime?      @db.Timestamptz(3)
 
   message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
 
@@ -1051,14 +1105,14 @@ model EventLog {
 
 /// Replays the stored response for a repeated Idempotency-Key (kept 24 hours).
 model IdempotencyKey {
-  key          String
-  userId       String
-  method       String
-  path         String
-  requestHash  String
-  status       Int
-  response     Json?
-  createdAt    DateTime @default(now()) @db.Timestamptz(3)
+  key         String
+  userId      String
+  method      String
+  path        String
+  requestHash String
+  status      Int
+  response    Json?
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
 
   @@id([key, userId])
   @@index([createdAt])

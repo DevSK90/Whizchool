@@ -137,7 +137,11 @@ describe("classes", () => {
     const detail = await get("/classes/cls_2026_7b");
     const staff: Json[] = await get("/staff");
     const maths = detail.subjects.find((s: Json) => s.subjectName === "Mathematics");
-    const other = staff.find((s) => s.id !== maths.teacherId && s.designation.startsWith("Teacher"));
+    // A teacher who's free whenever 7-B has Maths: a busy one is refused, see the timetables tests.
+    const board = await get("/classes/cls_2026_7b/timetable");
+    const lessons = (await get("/classes/cls_2026_7b/timetable", { version: "published" })).blocks.filter((b: Json) => b.classSubjectId === maths.id);
+    const busy = new Set(board.busy.filter((b: Json) => lessons.some((m: Json) => m.day === b.day && m.start < b.end && b.start < m.end)).map((b: Json) => b.teacherId));
+    const other = staff.find((s) => s.id !== maths.teacherId && s.designation.startsWith("Teacher") && !busy.has(s.id));
     await call("PUT", `/class-subjects/${maths.id}`, { teacherId: other.id });
     expect((await get("/classes/cls_2026_7b")).subjects.find((s: Json) => s.id === maths.id).teacherName).toBe(other.name);
     await expectStatus(422, call("PUT", `/class-subjects/${maths.id}`, { teacherId: "st_nope" }));

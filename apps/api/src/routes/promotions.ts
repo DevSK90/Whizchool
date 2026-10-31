@@ -6,6 +6,7 @@ import { schoolToday, toIsoDate } from "../dates";
 import { prisma } from "../db";
 import { defineRoute } from "../http/route";
 import { currentYearId } from "../school";
+import { copyTimetable } from "../services/timetables";
 import { fullName } from "../students";
 
 const ACTIONS = ["promote", "repeat", "leave", "graduate"] as const;
@@ -205,6 +206,7 @@ export const promotionRoutes = [
                 },
               });
               newId = created.id;
+              await copyTimetable(tx, c.id, newId);
             }
             classFor.set(id, newId);
           }

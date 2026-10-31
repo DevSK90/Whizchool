@@ -20,7 +20,8 @@
     "tabs": {
       "results": "Results",
       "attendance": "Attendance",
-      "fees": "Fees"
+      "fees": "Fees",
+      "timetable": "Timetable"
     },
     "fees": {
       "outstanding": "Outstanding balance",

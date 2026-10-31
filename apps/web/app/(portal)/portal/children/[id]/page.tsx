@@ -17,11 +17,20 @@ import { CardsSkeleton, EmptyState, ErrorState, PageSkeleton } from "@/component
 import { StudentAttendanceView } from "@/components/students/attendance-view";
 import { StudentResultsView } from "@/components/students/results-view";
 import { api, newIdempotencyKey } from "@/lib/api/client";
-import { useApiMutation, useStudent, useStudentInvoices, useStudentPayments } from "@/lib/api/hooks";
+import { ResponsiveTimetable } from "@/components/timetable/timetable-board";
+import { useApiMutation, useStudent, useStudentInvoices, useStudentPayments, useStudentTimetable } from "@/lib/api/hooks";
 import type { PayHereCheckout } from "@whizchool/shared/types";
 import { formatDate, formatMoney, initials } from "@/lib/format";
 import { startPayHereCheckout } from "@/lib/payhere";
 import { useUrlState } from "@/hooks/use-url-state";
+
+function ChildTimetable({ studentId }: { studentId: string }) {
+  const t = useTranslations("academics.timetables");
+  const { data, error, refetch, isPending } = useStudentTimetable(studentId);
+  if (isPending) return <PageSkeleton />;
+  if (error) return <ErrorState error={error} onRetry={refetch} />;
+  return data.blocks.length ? <ResponsiveTimetable hours={data.hours} blocks={data.blocks} /> : <EmptyState title={t("notPublished")} />;
+}
 
 export default function ChildPage({ params }: PageProps<"/portal/children/[id]">) {
   const { id } = use(params);
@@ -48,12 +57,13 @@ export default function ChildPage({ params }: PageProps<"/portal/children/[id]">
       />
       <Tabs value={tab} onValueChange={(v) => url.set({ tab: v })}>
         <TabsList className="mb-4 w-full sm:w-auto">
-          {(["results", "attendance", "fees"] as const).map((k) => (
+          {(["timetable", "results", "attendance", "fees"] as const).map((k) => (
             <TabsTrigger key={k} value={k} className="flex-1 sm:flex-none">
               {t(`tabs.${k}`)}
             </TabsTrigger>
           ))}
         </TabsList>
+        <TabsContent value="timetable">{tab === "timetable" && <ChildTimetable studentId={id} />}</TabsContent>
         <TabsContent value="results">{tab === "results" && <StudentResultsView studentId={id} reportHref={(examId) => `/portal/children/${id}/report/${examId}`} />}</TabsContent>
         <TabsContent value="attendance">{tab === "attendance" && <StudentAttendanceView studentId={id} />}</TabsContent>
         <TabsContent value="fees">{tab === "fees" && <ChildFees studentId={id} />}</TabsContent>

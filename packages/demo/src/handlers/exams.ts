@@ -34,6 +34,7 @@ import {
   studentClassSubjects,
   termAttendance,
 } from "../results";
+import { copyTimetable } from "./timetables";
 
 function getExam(db: DB, id: string) {
   return db.exams.get(id) ?? fail(404, "not_found", "Exam not found.");
@@ -521,6 +522,7 @@ export const examRoutes: Route[] = [
           for (const cs of db.classSubjects.rows.filter((x) => x.classId === c.id)) {
             db.classSubjects.insert({ id: nextId(db, "cs"), classId: cls.id, subjectId: cs.subjectId, teacherId: cs.teacherId });
           }
+          copyTimetable(db, c.id, cls.id);
         }
         classFor.set(id, cls.id);
       }

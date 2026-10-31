@@ -27,6 +27,7 @@ import type {
   Term,
   User,
 } from "@whizchool/shared/types";
+import type { StoredBlock, StoredTimetable } from "@whizchool/shared/timetable";
 
 export class Table<T extends { id: string }> {
   private map = new Map<string, T>();
@@ -106,6 +107,8 @@ export interface DB {
   classes: Table<ClassSection>;
   subjects: Table<Subject>;
   classSubjects: Table<ClassSubject>;
+  timetables: StoredTimetable[];
+  timetableBlocks: StoredBlock[];
   gradeBands: GradeBand[];
   staff: Table<Staff>;
   guardians: Table<Guardian>;

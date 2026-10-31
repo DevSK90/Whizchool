@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ApiError } from "@whizchool/shared/api";
+import { reassignmentClash } from "@whizchool/shared/timetable";
 import type { ClassDetail, ClassSubject, ClassSummary } from "@whizchool/shared/types";
 import { audit } from "../audit";
 import type { AuthContext } from "../auth/context";
@@ -9,6 +10,7 @@ import type { Prisma } from "../generated/prisma/client";
 import { omitNulls } from "../http/list";
 import { defineRoute } from "../http/route";
 import { currentYearId } from "../school";
+import { loadYear, lockTimetables } from "../services/timetables";
 import { studentListInclude, toStudentListItems } from "../students";
 
 const summaryInclude = {
@@ -208,7 +210,7 @@ export const classRoutes = [
     handler: async ({ auth, params, body }): Promise<ClassSubject> => {
       const cs = await prisma.classSubject.findUnique({
         where: { id: params.id },
-        include: { subject: { select: { name: true } }, class: { select: { name: true } }, teacher: { select: { name: true } } },
+        include: { subject: { select: { name: true } }, class: { select: { name: true, yearId: true } }, teacher: { select: { name: true } } },
       });
       if (!cs) throw new ApiError(404, "not_found", "Not found.");
       const teacher = body.teacherId ? await prisma.staff.findUnique({ where: { id: body.teacherId }, select: { name: true, status: true } }) : null;
@@ -216,6 +218,11 @@ export const classRoutes = [
         throw new ApiError(422, "validation", "Choose an active staff member.", { teacherId: "Choose an active staff member" });
       }
       const updated = await prisma.$transaction(async (tx) => {
+        await lockTimetables(tx);
+        if (body.teacherId) {
+          const clash = reassignmentClash(await loadYear(tx, cs.class.yearId), cs.id, body.teacherId, teacher!.name);
+          if (clash) throw new ApiError(409, "timetable_clash", clash.message, { teacherId: clash.message });
+        }
         const updated = await tx.classSubject.update({ where: { id: cs.id }, data: { teacherId: body.teacherId } });
         await audit(tx, auth, {
           action: "class.teacher",
