@@ -38,7 +38,7 @@ export function yearTimetables(db: DB, yearId: string): YearTimetables {
           subjectId: cs.subjectId,
           subjectName: subject.name,
           subjectCode: subject.code,
-          ...(subject.basket != null ? { basket: subject.basket } : {}),
+          ...(cs.optionGroup ? { optionGroup: cs.optionGroup } : {}),
           ...(teacher ? { teacherId: teacher.id, teacherName: teacher.name } : {}),
         };
       }),

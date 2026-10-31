@@ -1,5 +1,6 @@
 // Timetable rules, shared by the API, the demo API and the builder (which shows clashes while dragging).
 // A timetable is one weekly pattern per class per academic year. Times are minutes since midnight.
+import { sitsSubject } from "./curriculum";
 import type {
   ClassTimetableView,
   PlacedBlock,
@@ -59,8 +60,8 @@ export function timetableProblem(
       const sa = a.kind === "lesson" ? subjects.get(a.classSubjectId ?? "") : undefined;
       const sb = b.kind === "lesson" ? subjects.get(b.classSubjectId ?? "") : undefined;
       const name = (x: TimetableBlockInput, s?: TimetableSubject) => s?.subjectName ?? x.label ?? "Block";
-      const sameBasket = sa?.basket != null && sa.basket === sb?.basket && sa.id !== sb?.id;
-      if (!sameBasket) return { index: j, message: `${name(b, sb)} overlaps ${name(a, sa)}. Only O/L subjects from the same basket can run together.` };
+      const sameGroup = !!sa?.optionGroup && sa.optionGroup === sb?.optionGroup && sa.id !== sb?.id;
+      if (!sameGroup) return { index: j, message: `${name(b, sb)} overlaps ${name(a, sa)}. Only subjects students choose between can run together.` };
       if (sa!.teacherId && sa!.teacherId === sb!.teacherId) return { index: j, message: `${sa!.teacherName ?? "This teacher"} can't teach ${sa!.subjectName} and ${sb!.subjectName} at the same time.` };
     }
   }
@@ -156,7 +157,7 @@ function toBlock(y: YearTimetables, b: StoredBlock, subjects = new Map(y.subject
     ...(b.label ? { label: b.label } : {}),
     ...(b.room ? { room: b.room } : {}),
     ...(s ? { subjectId: s.subjectId, subjectName: s.subjectName, subjectCode: s.subjectCode } : {}),
-    ...(s?.basket != null ? { basket: s.basket } : {}),
+    ...(s?.optionGroup ? { optionGroup: s.optionGroup } : {}),
     ...(s?.teacherId ? { teacherId: s.teacherId } : {}),
     ...(s?.teacherName ? { teacherName: s.teacherName } : {}),
   };
@@ -226,14 +227,20 @@ export function classTimetableView(y: YearTimetables, classId: string, version: 
 /** Every class's progress: what's published, what's waiting, and what clashes. */
 export function timetableOverview(y: YearTimetables): TimetableOverviewRow[] {
   const placed = placedRows(y);
+  // One pass over the whole school: findClashes ignores blocks of the same class.
+  const drafts = placed.filter((b) => b.version === "draft");
+  const classOf = new Map(drafts.map((b) => [b.id, b.classId]));
+  const clashCount = new Map<string, number>();
+  for (const clash of findClashes(drafts, placed)) {
+    const id = classOf.get(clash.blockId)!;
+    clashCount.set(id, (clashCount.get(id) ?? 0) + 1);
+  }
   return [...y.classes]
     .sort((a, b) => a.gradeNumber - b.gradeNumber || a.name.localeCompare(b.name))
     .map((c) => {
       const t = y.timetables.find((x) => x.classId === c.id);
       const count = (version: TimetableVersion) => y.blocks.filter((b) => b.classId === c.id && b.version === version && b.kind === "lesson").length;
       const revision = t?.revision ?? 0;
-      const mine = placed.filter((b) => b.classId === c.id && b.version === "draft");
-      const clashes = findClashes(mine, placed.filter((b) => b.classId !== c.id));
       return {
         classId: c.id,
         className: c.name,
@@ -243,7 +250,7 @@ export function timetableOverview(y: YearTimetables): TimetableOverviewRow[] {
         publishedLessons: count("published"),
         ...(t?.publishedAt ? { publishedAt: t.publishedAt } : {}),
         hasUnpublishedChanges: revision > 0 && revision !== t?.publishedRevision,
-        clashes: clashes.length,
+        clashes: clashCount.get(c.id) ?? 0,
       };
     });
 }
@@ -302,7 +309,7 @@ export function teacherTimetable(y: YearTimetables, staff: { id: string; name: s
   };
 }
 
-/** A student's published week: O/L basket subjects only when they take them. */
+/** A student's published week: subjects they choose between only when they take them. */
 export function studentTimetable(y: YearTimetables, student: { id: string; classId: string; electiveSubjectIds: string[] }): StudentTimetable {
   const cls = y.classes.find((c) => c.id === student.classId)!;
   const t = y.timetables.find((x) => x.classId === cls.id);
@@ -316,7 +323,7 @@ export function studentTimetable(y: YearTimetables, student: { id: string; class
     blocks: y.blocks
       .filter((b) => b.classId === cls.id && b.version === "published")
       .map((b) => toBlock(y, b))
-      .filter((b) => b.basket == null || electives.has(b.subjectId ?? ""))
+      .filter((b) => sitsSubject(b.optionGroup, b.subjectId ?? "", electives))
       .map((b) => (b.kind === "lesson" && !b.room && cls.room ? { ...b, room: cls.room } : b))
       .sort(byTime),
   };

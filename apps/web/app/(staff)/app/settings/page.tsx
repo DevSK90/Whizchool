@@ -19,7 +19,7 @@ import { PageHeader } from "@/components/shared/page-header";
 import { ErrorState, PageSkeleton } from "@/components/shared/states";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { api, ApiError } from "@/lib/api/client";
-import { useApiMutation, useExams, useGradeBands, useSchool, useSubjects, useTerms, useYears } from "@/lib/api/hooks";
+import { useApiMutation, useExams, useGradeBands, useSchool, useStaff, useSubjects, useTerms, useYears } from "@/lib/api/hooks";
 import { parseTime, toTimeValue } from "@whizchool/shared/timetable";
 import type { GradeBand, GradeLevel, School, Subject } from "@whizchool/shared/types";
 import { useCan } from "@/lib/auth";
@@ -281,17 +281,18 @@ function Subjects() {
   const tl = useTranslations("status.level");
   const can = useCan();
   const { data, error, refetch, isPending } = useSubjects();
+  const [level, setLevel] = useState("");
   if (isPending) return <PageSkeleton />;
   if (error) return <ErrorState error={error} onRetry={refetch} />;
+  const rows = level ? data.filter((s) => s.levels.includes(level as GradeLevel)) : data;
   return (
     <Card>
       <CardHeader>
         <CardTitle>{tt("subjects")}</CardTitle>
-        {can("settings.edit") && (
-          <CardAction>
-            <SubjectDialog />
-          </CardAction>
-        )}
+        <CardAction className="flex items-center gap-2">
+          <FilterSelect ariaLabel={t("levels")} value={level} onChange={setLevel} allLabel={t("allLevels")} options={LEVELS.map((l) => ({ value: l, label: tl(l) }))} className="h-8 sm:w-40" />
+          {can("settings.edit") && <SubjectDialog />}
+        </CardAction>
       </CardHeader>
       <CardContent className="px-0">
         <Table>
@@ -299,16 +300,19 @@ function Subjects() {
             <TableRow>
               <TableHead className="pl-6">{t("name")}</TableHead>
               <TableHead>{t("code")}</TableHead>
+              <TableHead className="hidden lg:table-cell">{t("examNo")}</TableHead>
               <TableHead className="hidden md:table-cell">{t("levels")}</TableHead>
-              <TableHead className="hidden sm:table-cell">{t("basket")}</TableHead>
+              <TableHead className="hidden sm:table-cell">{t("group")}</TableHead>
+              <TableHead className="hidden sm:table-cell">{t("teachers")}</TableHead>
               <TableHead className="pr-6" />
             </TableRow>
           </TableHeader>
           <TableBody>
-            {data.map((s) => (
+            {rows.map((s) => (
               <TableRow key={s.id}>
                 <TableCell className="pl-6 font-medium">{s.name}</TableCell>
                 <TableCell className="font-mono text-xs">{s.code}</TableCell>
+                <TableCell className="hidden font-mono text-xs lg:table-cell">{s.examNo ?? "—"}</TableCell>
                 <TableCell className="hidden md:table-cell">
                   <div className="flex flex-wrap gap-1">
                     {s.levels.map((l) => (
@@ -318,7 +322,10 @@ function Subjects() {
                     ))}
                   </div>
                 </TableCell>
-                <TableCell className="hidden sm:table-cell">{s.basket ? s.basket : <span className="text-muted-foreground">{t("core")}</span>}</TableCell>
+                <TableCell className="hidden sm:table-cell">
+                  {s.basket ? t("basketLabel", { n: s.basket }) : s.choiceGroup ? t(s.choiceGroup) : s.streamIds ? t("byStream") : <span className="text-muted-foreground">{t("core")}</span>}
+                </TableCell>
+                <TableCell className="hidden text-sm sm:table-cell">{s.teacherIds.length ? t("teacherCount", { count: s.teacherIds.length }) : <span className="text-muted-foreground">{t("noTeachers")}</span>}</TableCell>
                 <TableCell className="pr-6 text-right">{can("settings.edit") && <SubjectDialog subject={s} />}</TableCell>
               </TableRow>
             ))}
@@ -334,12 +341,16 @@ function SubjectDialog({ subject }: { subject?: Subject }) {
   const tl = useTranslations("status.level");
   const tc = useTranslations("common");
   const [open, setOpen] = useState(false);
-  const blank = { name: "", code: "", levels: [] as GradeLevel[], basket: "" };
+  const staff = useStaff();
+  // This subject's current teachers first, so they don't get lost in a long list.
+  const teachers = (staff.data ?? []).filter((s) => s.status === "active" && s.designation.startsWith("Teacher")).sort((a, b) => Number(subject?.teacherIds.includes(b.id) ?? false) - Number(subject?.teacherIds.includes(a.id) ?? false));
+  const blank = { name: "", code: "", levels: [] as GradeLevel[], group: "", examNo: "", teacherIds: [] as string[] };
   const [form, setForm] = useState(blank);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const save = useApiMutation(
     () => {
-      const body = { ...form, basket: form.basket ? Number(form.basket) : undefined };
+      const { group, ...rest } = form;
+      const body = { ...rest, basket: /^[123]$/.test(group) ? Number(group) : undefined, choiceGroup: /^[123]$/.test(group) ? undefined : group || undefined };
       return subject ? api.put(`/subjects/${subject.id}`, body) : api.post("/subjects", body);
     },
     { invalidate: [["subjects"]], success: t("saved"), toastError: false, onSuccess: () => setOpen(false) },
@@ -350,7 +361,11 @@ function SubjectDialog({ subject }: { subject?: Subject }) {
       onOpenChange={(o) => {
         setOpen(o);
         if (o) {
-          setForm(subject ? { name: subject.name, code: subject.code, levels: subject.levels, basket: subject.basket ? String(subject.basket) : "" } : blank);
+          setForm(
+            subject
+              ? { name: subject.name, code: subject.code, levels: subject.levels, group: subject.basket ? String(subject.basket) : (subject.choiceGroup ?? ""), examNo: subject.examNo ?? "", teacherIds: subject.teacherIds }
+              : blank,
+          );
           setErrors({});
         }
       }}
@@ -401,14 +416,38 @@ function SubjectDialog({ subject }: { subject?: Subject }) {
               <FieldLabel>{t("basket")}</FieldLabel>
               <FilterSelect
                 ariaLabel={t("basket")}
-                value={form.basket}
-                onChange={(v) => setForm({ ...form, basket: v })}
+                value={form.group}
+                onChange={(v) => setForm({ ...form, group: v })}
                 allLabel={t("core")}
-                options={["1", "2", "3"].map((b) => ({ value: b, label: b }))}
-                className="sm:w-40"
+                options={[
+                  ...["1", "2", "3"].map((b) => ({ value: b, label: t("basketLabel", { n: b }) })),
+                  { value: "first_language", label: t("first_language") },
+                  { value: "religion", label: t("religion") },
+                ]}
+                className="sm:w-52"
               />
             </Field>
           )}
+          <Field className="sm:w-40">
+            <FieldLabel htmlFor="sexam">{t("examNo")}</FieldLabel>
+            <Input id="sexam" value={form.examNo} maxLength={6} onChange={(e) => setForm({ ...form, examNo: e.target.value })} />
+          </Field>
+          <Field data-invalid={!!errors.teacherIds}>
+            <FieldLabel>{t("teachers")}</FieldLabel>
+            <div className="grid max-h-48 gap-2 overflow-y-auto sm:grid-cols-2">
+              {teachers.map((s) => (
+                <label key={s.id} className="flex items-center gap-2 text-sm">
+                  <Checkbox
+                    checked={form.teacherIds.includes(s.id)}
+                    onCheckedChange={(c) => setForm({ ...form, teacherIds: c ? [...form.teacherIds, s.id] : form.teacherIds.filter((x) => x !== s.id) })}
+                  />
+                  {s.name}
+                </label>
+              ))}
+            </div>
+            <FieldDescription>{t("teachersHint")}</FieldDescription>
+            <FieldError>{errors.teacherIds}</FieldError>
+          </Field>
         </FieldGroup>
         <DialogFooter>
           <Button onClick={() => save.mutateAsync(undefined).catch((e) => setErrors(e instanceof ApiError && e.fields ? e.fields : { name: e.message }))} disabled={save.isPending}>

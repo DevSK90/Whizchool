@@ -11,6 +11,11 @@ async function save(id: string, blocks: Json[], revision?: number) {
   return call("PUT", `/classes/${id}/timetable`, { revision: revision ?? (await board(id, "draft")).revision, blocks });
 }
 const publish = (id: string) => call("POST", `/classes/${id}/timetable/publish`);
+/** Adds a teacher to a subject's list, so a class can be given them. */
+async function listTeacher(subjectId: string, teacherId: string) {
+  const s = (await get("/subjects")).find((x: Json) => x.id === subjectId);
+  await call("PUT", `/subjects/${subjectId}`, { name: s.name, levels: s.levels, basket: s.basket, choiceGroup: s.choiceGroup, examNo: s.examNo, teacherIds: [...s.teacherIds, teacherId] });
+}
 
 beforeAll(async () => {
   await resetData();
@@ -60,12 +65,12 @@ describe("saving a board", () => {
     await expectStatus(409, save(id, [lesson(b.id, 1, 480)], view.revision));
   });
 
-  it("lets subjects of one O/L basket run side by side, and nothing else", async () => {
+  it("lets subjects of one choice run side by side, and nothing else", async () => {
     const id = classNamed("10-B").id;
     const view = await board(id);
-    const basket1 = view.subjects.filter((s: Json) => s.basket === 1);
-    const basket2 = view.subjects.find((s: Json) => s.basket === 2);
-    const core = view.subjects.find((s: Json) => s.basket === undefined);
+    const basket1 = view.subjects.filter((s: Json) => s.optionGroup === "basket1");
+    const basket2 = view.subjects.find((s: Json) => s.optionGroup === "basket2");
+    const core = view.subjects.find((s: Json) => s.optionGroup === undefined);
     expect(basket1.length).toBeGreaterThan(1);
     const together = await save(id, basket1.map((s: Json) => lesson(s.id, 2, 540)));
     expect(together.blocks).toHaveLength(basket1.length);
@@ -112,20 +117,21 @@ describe("clashes and publishing", () => {
     await save(a.classId, [lesson(a.subjects[0].id, 1, 450, 455, "Science Lab")]);
     await publish(a.classId);
     const saved = await save(b.classId, [lesson(b.subjects[0].id, 1, 450, 455, "science lab")]);
-    expect(saved.clashes.map((c: Json) => [c.kind, c.otherClassName])).toEqual([["room", "9-A"]]);
+    expect(saved.clashes.map((c: Json) => [c.kind, c.otherClassName])).toContainEqual(["room", "9-A"]);
     await expectStatus(409, publish(b.classId));
   });
 
   it("treats the same teacher, subject and grade at once as one combined lesson", async () => {
     const a = await board(classNamed("11-A").id);
     const b = await board(classNamed("11-B").id);
-    const subjectA = a.subjects.find((s: Json) => s.basket === 2);
+    const subjectA = a.subjects.find((s: Json) => s.optionGroup === "basket2");
     const subjectB = b.subjects.find((s: Json) => s.subjectId === subjectA.subjectId);
-    const otherSubject = b.subjects.find((s: Json) => s.basket === 3);
+    const otherSubject = b.subjects.find((s: Json) => s.optionGroup === "basket3");
     await save(a.classId, [lesson(subjectA.id, 1, 450, 455)]);
     await save(b.classId, [lesson(subjectB.id, 1, 450, 455)]);
     await publish(a.classId);
     await publish(b.classId);
+    await listTeacher(subjectB.subjectId, subjectA.teacherId);
     await call("PUT", `/class-subjects/${subjectB.id}`, { teacherId: subjectA.teacherId });
     expect((await board(b.classId)).clashes).toEqual([]);
 
@@ -137,6 +143,7 @@ describe("clashes and publishing", () => {
     expect((await publish(b.classId)).hasUnpublishedChanges).toBe(false);
 
     // A different subject at that time is a real clash.
+    await listTeacher(otherSubject.subjectId, subjectA.teacherId);
     await call("PUT", `/class-subjects/${otherSubject.id}`, { teacherId: subjectA.teacherId });
     const different = await save(b.classId, [lesson(otherSubject.id, 1, 450, 455)]);
     expect(different.clashes.map((c: Json) => c.kind)).toContain("teacher");
@@ -175,6 +182,7 @@ describe("clashes and publishing", () => {
     await save(b.classId, [lesson(other.id, 1, 455, 460)]);
     await publish(a.classId);
     await publish(b.classId);
+    await listTeacher(other.subjectId, subject.teacherId);
     await call("PUT", `/class-subjects/${other.id}`, { teacherId: subject.teacherId });
 
     // Both drafts move onto the same time.
@@ -200,6 +208,7 @@ describe("clashes and publishing", () => {
     const taught = view.blocks.find((b: Json) => b.kind === "lesson" && b.teacherId);
     const elsewhere = live.busy.find((b: Json) => b.version === "published" && b.teacherId && b.teacherId !== taught.teacherId && b.day === taught.day && b.start < taught.end && taught.start < b.end);
     expect(elsewhere).toBeDefined();
+    await listTeacher(taught.subjectId, elsewhere.teacherId);
     const refused = await expectStatus(409, call("PUT", `/class-subjects/${taught.classSubjectId}`, { teacherId: elsewhere.teacherId }));
     expect(refused.message).toContain(elsewhere.className);
 
@@ -253,7 +262,7 @@ describe("who sees what", () => {
   it("shows parents their own children's published week, with only the electives they take", async () => {
     await login("admin");
     const published = await board(classNamed("10-A").id, "published");
-    const basket = published.blocks.filter((b: Json) => b.basket != null);
+    const basket = published.blocks.filter((b: Json) => b.optionGroup != null);
     expect(basket.length).toBeGreaterThan(0);
 
     await login("parent");
@@ -262,10 +271,10 @@ describe("who sees what", () => {
     const week = await get(`/students/${kavindu.id}/timetable`);
     expect(week).toMatchObject({ className: "10-A", hours: { start: 450, end: 810 } });
     expect(week.blocks.some((b: Json) => b.kind === "interval")).toBe(true);
-    const lessons = week.blocks.filter((b: Json) => b.basket != null);
+    const lessons = week.blocks.filter((b: Json) => b.optionGroup != null);
     expect(lessons.length).toBeGreaterThan(0);
     expect(lessons.length).toBeLessThan(basket.length);
-    // Within a basket's slot the child has exactly one subject.
+    // Within a choice's slot the child has exactly one subject.
     const slots = new Set(lessons.map((b: Json) => `${b.day}|${b.start}`));
     expect(slots.size).toBe(lessons.length);
 

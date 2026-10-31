@@ -12,7 +12,7 @@ describe("attendance", () => {
   it("shows each class's register state, scoped to the teacher's own class", async () => {
     await login("admin");
     const all = await get("/attendance/summary", { date: FRIDAY });
-    expect(all.classes).toHaveLength(30);
+    expect(all.classes).toHaveLength(34);
     const teacher = await login("teacher");
     const mine = await get("/attendance/summary", { date: FRIDAY });
     expect(mine.classes.map((c: Json) => c.classId)).toEqual(teacher.classIds);

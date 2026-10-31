@@ -8,6 +8,7 @@ import type {
   StudentDetail,
   StudentResults,
 } from "@whizchool/shared/types";
+import { keepChoices, tooManyChoices } from "@whizchool/shared/curriculum";
 import { gradeFor } from "@whizchool/shared/grading";
 import { sameGuardianName } from "@whizchool/shared/people";
 import { normalizeLocalPhone } from "@whizchool/shared/phone";
@@ -79,6 +80,19 @@ export function othersWithPhone(db: DB, input: { name: string; phone: string }) 
 const nameWithInitials = (first: string, last: string) =>
   `${first.split(/\s+/).filter(Boolean).map((n) => `${n[0]!.toUpperCase()}.`).join(" ")} ${last}`;
 
+/** A student's choices, kept to what the class offers; refuses more than a group allows. */
+function checkedChoices(db: DB, classId: string, electives: string[]) {
+  const offered = db.classSubjects.rows.filter((cs) => cs.classId === classId);
+  const kept = keepChoices(offered, electives);
+  const stream = db.streams.get(db.classes.get(classId)?.streamId);
+  const tooMany = tooManyChoices(offered, kept, stream?.optionsRequired ?? 0);
+  if (tooMany) {
+    const message = `Choose ${tooMany.allowed === 1 ? "one subject" : `${tooMany.allowed} subjects`} from each group.`;
+    fail(422, "validation", message, { electiveSubjectIds: message });
+  }
+  return kept;
+}
+
 function validateStudent(db: DB, input: Partial<NewStudentInput>) {
   const fields: Record<string, string> = {};
   if (!input.firstName?.trim()) fields.firstName = "Required";
@@ -139,7 +153,7 @@ export function createStudent(ctx: Ctx, input: NewStudentInput, opts: { firstInv
     religion: input.religion,
     medical: input.medical,
     guardianIds: [guardian.id],
-    electiveSubjectIds: input.electiveSubjectIds ?? [],
+    electiveSubjectIds: checkedChoices(db, input.classId, input.electiveSubjectIds ?? []),
     discountIds: input.discountIds ?? [],
   };
   db.students.insert(student);
@@ -309,7 +323,7 @@ export const studentRoutes: Route[] = [
       const movedClass = classId !== s.classId;
       Object.assign(s, {
         firstName: firstName.trim(), lastName: lastName.trim(), gender, dob, address, religion, medical,
-        electiveSubjectIds: electiveSubjectIds ?? s.electiveSubjectIds, discountIds: discountIds ?? s.discountIds,
+        electiveSubjectIds: electiveSubjectIds ? checkedChoices(db, classId, electiveSubjectIds) : s.electiveSubjectIds, discountIds: discountIds ?? s.discountIds,
       });
       if (movedClass) {
         const cls = db.classes.get(classId)!;

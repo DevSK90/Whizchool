@@ -73,7 +73,7 @@ export interface LaidOutBlock<T extends BoardBlock = BoardBlock> {
   lanes: number;
 }
 
-/** Joins same-time intervals on neighbouring days into bars, and puts overlapping lessons (O/L baskets) side by side. */
+/** Joins same-time intervals on neighbouring days into bars, and puts overlapping lessons (subjects students choose between) side by side. */
 export function layoutBlocks<T extends BoardBlock>(
   blocks: T[],
 ): LaidOutBlock<T>[] {
@@ -169,7 +169,7 @@ export function BlockCard({
       className={cn(
         "relative flex h-full flex-col justify-center overflow-hidden rounded-lg border px-2 text-xs leading-tight",
         narrow
-          ? "items-center border-l-4 px-1 text-center text-foreground"
+          ? "items-center border-l-2 px-0 text-center text-[10px] text-foreground"
           : lesson
             ? "border-l-4 text-foreground"
             : "items-center bg-muted/70 text-center text-muted-foreground",

@@ -19,10 +19,10 @@ export async function loadYear(db: Client, yearId: string): Promise<YearTimetabl
     SELECT c."id", c."name", c."gradeId", g."number" AS "gradeNumber", c."room", t."name" AS "classTeacherName"
     FROM "Class" c JOIN "Grade" g ON g."id" = c."gradeId" LEFT JOIN "Staff" t ON t."id" = c."classTeacherId"
     WHERE c."yearId" = ${yearId}`;
-  const subjects = await db.$queryRaw<{ id: string; classId: string; subjectId: string; subjectName: string; subjectCode: string; basket: number | null; teacherId: string | null; teacherName: string | null }[]>`
-    SELECT cs."id", cs."classId", cs."subjectId", s."name" AS "subjectName", s."code" AS "subjectCode", s."basket", cs."teacherId", t."name" AS "teacherName"
+  const subjects = await db.$queryRaw<{ id: string; classId: string; subjectId: string; subjectName: string; subjectCode: string; optionGroup: string | null; teacherId: string | null; teacherName: string | null }[]>`
+    SELECT cs."id", cs."classId", cs."subjectId", s."name" AS "subjectName", s."code" AS "subjectCode", cs."optionGroup", cs."teacherId", t."name" AS "teacherName"
     FROM "ClassSubject" cs JOIN "Class" c ON c."id" = cs."classId" JOIN "Subject" s ON s."id" = cs."subjectId" LEFT JOIN "Staff" t ON t."id" = cs."teacherId"
-    WHERE c."yearId" = ${yearId} ORDER BY s."basket" NULLS FIRST, s."name"`;
+    WHERE c."yearId" = ${yearId} ORDER BY cs."optionGroup" NULLS FIRST, s."name"`;
   const timetables = await db.$queryRaw<{ classId: string; revision: number; publishedRevision: number | null; publishedAt: Date | null; publishedBy: string | null; savedBy: string | null }[]>`
     SELECT t."classId", t."revision", t."publishedRevision", t."publishedAt", t."publishedBy", t."savedBy"
     FROM "ClassTimetable" t JOIN "Class" c ON c."id" = t."classId" WHERE c."yearId" = ${yearId}`;

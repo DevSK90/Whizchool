@@ -2,6 +2,7 @@
 // ReportCard rows when they're approved, so released results never change afterwards (a later edit
 // to the grade bands, a student moving class, or a new year doesn't rewrite them).
 import { gradeFor, rankByAverage, summarizeMarks } from "@whizchool/shared/grading";
+import { sitsSubject } from "@whizchool/shared/curriculum";
 import type { Exam, GradeBand, MarkValue, ReportCard, ReportCardStatus } from "@whizchool/shared/types";
 import { Prisma } from "../generated/prisma/client";
 import type { Db } from "../db";
@@ -35,13 +36,6 @@ export function toExam(e: Prisma.ExamGetPayload<{ include: typeof examInclude }>
   };
 }
 
-/**
- * O/L students sit the core subjects plus their chosen basket electives; everyone else sits all the class's subjects.
- * GET /exams/:id/progress applies the same rule in SQL; change both together.
- */
-export const sitsSubject = (level: string, basket: number | null, subjectId: string, electives: Set<string>) =>
-  level !== "ol" || basket === null || electives.has(subjectId);
-
 /** The class register for results: active students, alphabetical, with their electives. */
 export const classRoster = (db: Client, classId: string) =>
   db.student.findMany({
@@ -53,7 +47,7 @@ export const classRoster = (db: Client, classId: string) =>
 const classInclude = {
   grade: { select: { name: true, number: true, level: true } },
   classTeacher: { select: { name: true } },
-  subjects: { select: { subjectId: true, subject: { select: { name: true, basket: true } } }, orderBy: { subject: { name: "asc" } } },
+  subjects: { select: { subjectId: true, optionGroup: true, subject: { select: { name: true } } }, orderBy: { subject: { name: "asc" } } },
 } satisfies Prisma.ClassSectionInclude;
 
 export const gradeBands = async (db: Client): Promise<GradeBand[]> =>
@@ -74,7 +68,7 @@ export async function classResults(db: Client, examId: string, classId: string) 
   const rows = roster.map((s) => {
     const electives = new Set(s.subjects.map((x) => x.subjectId));
     const subjects = cls.subjects
-      .filter((cs) => sitsSubject(cls.grade.level, cs.subject.basket, cs.subjectId, electives))
+      .filter((cs) => sitsSubject(cs.optionGroup, cs.subjectId, electives))
       .map((cs) => ({ subjectId: cs.subjectId, name: cs.subject.name, mark: markValue(byKey.get(`${s.id}|${cs.subjectId}`)) }));
     const { total, average } = summarizeMarks(subjects.map((x) => x.mark));
     return { student: s, subjects, total, average };

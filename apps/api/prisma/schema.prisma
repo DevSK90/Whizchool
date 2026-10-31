@@ -101,9 +101,11 @@ model Grade {
 
 /// A/L streams (Science, Commerce, Arts, Technology…).
 model Stream {
-  id   String @id @default(uuid(7))
-  name String
-  code String @unique
+  id              String @id @default(uuid(7))
+  name            String
+  code            String @unique
+  /// How many of the stream's optional subjects each student takes.
+  optionsRequired Int    @default(0)
 
   classes  ClassSection[]
   subjects SubjectStream[]
@@ -140,23 +142,42 @@ model ClassSection {
 }
 
 model Subject {
-  id     String       @id @default(uuid(7))
-  name   String
-  code   String       @unique
-  levels GradeLevel[]
+  id          String       @id @default(uuid(7))
+  name        String
+  code        String       @unique
+  levels      GradeLevel[]
   /// O/L elective basket (1–3); null = core subject.
-  basket Int?
+  basket      Int?
+  /// O/L: compulsory, but each student takes one of the group: first_language or religion.
+  choiceGroup String?
+  /// The Department of Examinations' subject number, e.g. 10 or 25A.
+  examNo      String?
 
   streams         SubjectStream[]
+  teachers        SubjectTeacher[]
   classSubjects   ClassSubject[]
   studentSubjects StudentSubject[]
   marks           Mark[]
   markSheets      MarkSheet[]
 }
 
+/// The staff who teach a subject; a class's teacher for it comes from this list.
+model SubjectTeacher {
+  subjectId String
+  staffId   String
+
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  staff   Staff   @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  @@id([subjectId, staffId])
+  @@index([staffId])
+}
+
 model SubjectStream {
   subjectId String
   streamId  String
+  /// Students of the stream choose this subject; otherwise all of them take it.
+  optional  Boolean @default(false)
 
   subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
   stream  Stream  @relation(fields: [streamId], references: [id], onDelete: Cascade)
@@ -166,10 +187,12 @@ model SubjectStream {
 
 /// Who teaches which subject to which class (drives the own_subjects data scope).
 model ClassSubject {
-  id        String  @id @default(uuid(7))
-  classId   String
-  subjectId String
-  teacherId String?
+  id          String  @id @default(uuid(7))
+  classId     String
+  subjectId   String
+  teacherId   String?
+  /// Students choose within this group (basket1–3, first_language, religion, options); null means everyone takes it.
+  optionGroup String?
 
   class           ClassSection     @relation(fields: [classId], references: [id], onDelete: Cascade)
   subject         Subject          @relation(fields: [subjectId], references: [id])
@@ -357,9 +380,10 @@ model Staff {
   status      StaffStatus @default(active)
   userId      String?     @unique
 
-  user          User?          @relation(fields: [userId], references: [id])
+  user          User?            @relation(fields: [userId], references: [id])
   classes       ClassSection[]
   classSubjects ClassSubject[]
+  subjects      SubjectTeacher[]
 }
 
 enum Relationship {

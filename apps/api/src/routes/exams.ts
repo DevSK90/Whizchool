@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ApiError } from "@whizchool/shared/api";
+import { sitsSubject } from "@whizchool/shared/curriculum";
 import type { ExamProgress, MarkSheet, MarkValue } from "@whizchool/shared/types";
 import { audit } from "../audit";
 import type { AuthContext } from "../auth/context";
@@ -9,7 +10,7 @@ import { prisma } from "../db";
 import { Prisma } from "../generated/prisma/client";
 import { defineRoute } from "../http/route";
 import { currentYearId } from "../school";
-import { examInclude, markValue, reportStatus, sitsSubject, toExam } from "../services/results";
+import { examInclude, markValue, reportStatus, toExam } from "../services/results";
 import { fullName } from "../students";
 
 async function loadExam(id: string) {
@@ -37,7 +38,7 @@ async function loadSheet(exam: { id: string; yearId: string }, classId: string, 
     select: { id: true, admissionNo: true, firstName: true, lastName: true, subjects: { select: { subjectId: true } } },
     orderBy: [{ firstName: "asc" }, { lastName: "asc" }],
   });
-  const roster = students.filter((s) => sitsSubject(cls.grade.level, cs.subject.basket, subjectId, new Set(s.subjects.map((x) => x.subjectId))));
+  const roster = students.filter((s) => sitsSubject(cs.optionGroup, subjectId, new Set(s.subjects.map((x) => x.subjectId))));
   const sheet = await prisma.markSheet.findUnique({ where: { examId_classId_subjectId: { examId: exam.id, classId, subjectId } } });
   return { cls, subject: cs.subject, roster, submitted: !!sheet?.submittedAt };
 }
@@ -112,7 +113,7 @@ export const examRoutes = [
       const exam = await loadExam(params.id);
       const full = hasFullScope(auth, "marks.view");
       // Counted in the database: a large school has ~500 sheets and ~10,000 marks per exam. Who sits a
-      // subject follows sitsSubject (O/L basket subjects only for the students who chose them).
+      // subject follows sitsSubject (a subject in an option group only for the students who chose it).
       const rows = await prisma.$queryRaw<
         { classId: string; className: string; gradeNumber: number; subjectId: string; subjectName: string; teacherName: string | null; entered: number; total: number; submitted: boolean }[]
       >`
@@ -126,7 +127,7 @@ export const examRoutes = [
         JOIN "Subject" sub ON sub."id" = cs."subjectId"
         LEFT JOIN "Staff" t ON t."id" = cs."teacherId"
         LEFT JOIN "Student" s ON s."classId" = cs."classId" AND s."status" = 'active'
-          AND (g."level" <> 'ol' OR sub."basket" IS NULL
+          AND (cs."optionGroup" IS NULL
                OR EXISTS (SELECT 1 FROM "StudentSubject" ss WHERE ss."studentId" = s."id" AND ss."subjectId" = cs."subjectId"))
         LEFT JOIN "Mark" m ON m."examId" = ${exam.id} AND m."studentId" = s."id" AND m."subjectId" = cs."subjectId"
         WHERE c."yearId" = ${exam.yearId} ${full ? Prisma.empty : Prisma.sql`AND cs."id" IN (${Prisma.join([...auth.session.classSubjectIds, ""])})`}

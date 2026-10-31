@@ -1,17 +1,13 @@
 // Result computations shared by exam, report-card, student and portal handlers.
+import { sitsSubject } from "@whizchool/shared/curriculum";
 import { gradeFor, rankByAverage, summarizeMarks } from "@whizchool/shared/grading";
 import type { ClassSubject, MarkValue, ReportCardStatus, Student, Term } from "@whizchool/shared/types";
 import type { DB } from "./db";
 
 export function studentClassSubjects(db: DB, s: Student): ClassSubject[] {
-  const css = db.classSubjects.rows.filter((cs) => cs.classId === s.classId);
-  const grade = db.grades.get(s.gradeId);
-  if (grade?.level !== "ol") return css;
-  // O/L: core subjects (no basket) + the student's chosen basket electives
-  return css.filter((cs) => {
-    const subject = db.subjects.get(cs.subjectId);
-    return !subject?.basket || s.electiveSubjectIds.includes(cs.subjectId);
-  });
+  // What everyone takes, plus what they chose in the class's option groups.
+  const electives = new Set(s.electiveSubjectIds);
+  return db.classSubjects.rows.filter((cs) => cs.classId === s.classId && sitsSubject(cs.optionGroup, cs.subjectId, electives));
 }
 
 export function classRoster(db: DB, classId: string) {

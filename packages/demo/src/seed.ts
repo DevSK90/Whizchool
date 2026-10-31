@@ -1,6 +1,7 @@
 // Deterministic demo dataset: a ~670-student private school (Grades 1–13, A/L streams) for 2026.
 import { addDays, format, getDay, parseISO } from "date-fns";
 import { ALL_PERMISSIONS, type PermissionKey } from "@whizchool/shared/permissions";
+import { CURRICULUM_STREAMS, CURRICULUM_SUBJECTS, optionGroupFor, type OfferedSubject } from "@whizchool/shared/curriculum";
 import { DEFAULT_SCHOOL_DAY, type StoredBlock } from "@whizchool/shared/timetable";
 import { DEFAULT_GRADE_BANDS } from "@whizchool/shared/grading";
 import type {
@@ -51,55 +52,31 @@ const STREETS = ["Temple Road", "Lake Drive", "Hill Street", "Peradeniya Road", 
 
 const LEVEL_OF = (n: number): GradeLevel => (n <= 5 ? "primary" : n <= 9 ? "junior" : n <= 11 ? "ol" : "al");
 
-// subject code → [name, levels, basket?]
-const SUBJECTS: [string, string, GradeLevel[], (1 | 2 | 3)?][] = [
-  ["SIN", "Sinhala", ["primary", "junior", "ol"]],
-  ["ENG", "English", ["primary", "junior", "ol"]],
-  ["MAT", "Mathematics", ["primary", "junior", "ol"]],
-  ["ENV", "Environmental Studies", ["primary"]],
-  ["REL", "Religion", ["primary", "junior", "ol"]],
-  ["ART", "Art", ["primary", "junior", "ol"], 2],
-  ["SCI", "Science", ["junior", "ol"]],
-  ["HIS", "History", ["junior", "ol"]],
-  ["GEO", "Geography", ["junior", "ol", "al"], 1],
-  ["CIV", "Civic Education", ["junior", "ol"], 1],
-  ["HPE", "Health & Physical Education", ["junior", "ol"], 3],
-  ["ICT", "Information & Communication Technology", ["junior", "ol"], 3],
-  ["TAM", "Tamil (Second Language)", ["junior"]],
-  ["BUS", "Business & Accounting Studies", ["ol"], 1],
-  ["MUS", "Music", ["ol"], 2],
-  ["ELIT", "English Literature", ["ol"], 2],
-  ["AGR", "Agriculture & Food Technology", ["ol"], 3],
-  ["CMATH", "Combined Mathematics", ["al"]],
-  ["PHY", "Physics", ["al"]],
-  ["CHEM", "Chemistry", ["al"]],
-  ["BIO", "Biology", ["al"]],
-  ["ACC", "Accounting", ["al"]],
-  ["BST", "Business Studies", ["al"]],
-  ["ECON", "Economics", ["al"]],
-  ["POL", "Political Science", ["al"]],
-  ["SINL", "Sinhala Literature", ["al"]],
-  ["GENG", "General English", ["al"]],
-];
-
-const STREAMS: [string, string, string[]][] = [
-  ["PS", "Physical Science", ["CMATH", "PHY", "CHEM", "GENG"]],
-  ["BS", "Biological Science", ["BIO", "PHY", "CHEM", "GENG"]],
-  ["COM", "Commerce", ["ACC", "BST", "ECON", "GENG"]],
-  ["ART", "Arts", ["POL", "SINL", "GEO", "GENG"]],
-];
+// What the demo school offers, from the national curriculum: a school doesn't teach all of it.
+const STREAM_OFFERS: Record<string, string[]> = {
+  PS: ["CMATH", "PHY", "CHEM", "AICT", "GENG", "CGT"],
+  BS: ["BIO", "CHEM", "PHY", "AGRI", "GENG", "CGT"],
+  COM: ["ACC", "BST", "ECON", "BSTAT", "AICT", "GENG", "CGT"],
+  ART: ["POL", "ALSIN", "AGEO", "ECON", "HISC", "BUDD", "AART", "GENG", "CGT"],
+  ET: ["ETEC", "SFT", "CIVT", "EEIT", "AICT", "GENG", "CGT"],
+  BT: ["BTEC", "SFT", "FOOD", "AGRO", "BIOR", "GENG", "CGT"],
+};
+const STREAMS: [string, string, string[]][] = CURRICULUM_STREAMS.map((s) => [s.code, s.name, STREAM_OFFERS[s.code]!]);
 
 const PRIMARY_SUBJECTS = ["SIN", "ENG", "MAT", "ENV", "REL", "ART"];
 const JUNIOR_SUBJECTS = ["SIN", "ENG", "MAT", "SCI", "HIS", "GEO", "CIV", "REL", "HPE", "ICT", "TAM", "ART"];
-const OL_CORE = ["REL", "SIN", "ENG", "MAT", "SCI", "HIS"];
-const OL_BASKETS: Record<1 | 2 | 3, string[]> = { 1: ["BUS", "GEO", "CIV"], 2: ["ART", "MUS", "ELIT"], 3: ["ICT", "HPE", "AGR"] };
+const OL_CORE = ["ENG", "MAT", "SCI", "HIS", "SIN", "TML", "BUD", "HIN", "ISL", "CHR"];
+const OL_BASKETS: Record<1 | 2 | 3, string[]> = { 1: ["BUS", "GEO", "CIV"], 2: ["ART", "MUSE", "ELIT"], 3: ["ICT", "HPE", "AGR"] };
 
 // teacher specialties: subject code → number of teachers
 const SPECIALISTS: [string, number][] = [
-  ["SIN", 3], ["ENG", 4], ["MAT", 3], ["SCI", 3], ["HIS", 2], ["GEO", 2], ["CIV", 1], ["REL", 2],
-  ["HPE", 2], ["ICT", 2], ["TAM", 1], ["ART", 2], ["MUS", 1], ["BUS", 2], ["ELIT", 1], ["AGR", 1],
-  ["CMATH", 1], ["PHY", 1], ["CHEM", 1], ["BIO", 1], ["ACC", 1], ["BST", 1], ["ECON", 1], ["POL", 1], ["SINL", 1],
+  ["SIN", 3], ["TML", 1], ["ENG", 4], ["MAT", 3], ["SCI", 3], ["HIS", 2], ["GEO", 2], ["CIV", 1], ["REL", 2],
+  ["BUD", 1], ["HIN", 1], ["ISL", 1], ["CHR", 1], ["HPE", 2], ["ICT", 2], ["TAM", 1], ["ART", 2], ["MUSE", 1], ["BUS", 2], ["ELIT", 1], ["AGR", 1],
+  ["CMATH", 1], ["PHY", 1], ["CHEM", 1], ["BIO", 1], ["ACC", 1], ["BST", 1], ["ECON", 1], ["POL", 1], ["BSTAT", 1],
+  ["ETEC", 1], ["BTEC", 1], ["SFT", 1], ["CIVT", 1], ["EEIT", 1], ["FOOD", 1], ["AGRO", 1], ["BIOR", 1],
 ];
+// A/L subjects taught by the teachers of their O/L counterpart.
+const SHARED_TEACHERS: Record<string, string> = { GENG: "ENG", CGT: "ENG", AICT: "ICT", AGEO: "GEO", ALSIN: "SIN", AART: "ART", AGRI: "AGR", BUDD: "BUD", HISC: "HIS" };
 
 const TUITION: Record<GradeLevel, number> = { primary: 12500, junior: 15000, ol: 17500, al: 20000 };
 
@@ -195,13 +172,13 @@ function seedTimetables(db: DB, classes: ClassSection[]) {
   const interval = { start: firstLessons + 4 * 40, end: firstLessons + 4 * 40 + 30 };
   const lessonStarts = [0, 1, 2, 3].map((i) => firstLessons + i * 40).concat([0, 1, 2, 3].map((i) => interval.end + i * 40));
   const teacherBusy = new Set<string>();
-  for (const c of classes) {
+  // A/L first: a class's options need several teachers free at once, and those teachers are few.
+  for (const c of [...classes].sort((a, b) => Number(b.streamId != null) - Number(a.streamId != null))) {
     const subjects = db.classSubjects.rows.filter((cs) => cs.classId === c.id);
-    // A basket's subjects run together, so they're placed as one unit.
+    // Subjects students choose between run together, so they're placed as one unit.
     const units = new Map<string, typeof subjects>();
     for (const cs of subjects) {
-      const basket = db.subjects.get(cs.subjectId)?.basket;
-      const key = basket == null ? cs.id : `basket${basket}`;
+      const key = cs.optionGroup ?? cs.id;
       units.set(key, [...(units.get(key) ?? []), cs]);
     }
     const rotation = [...units.values()];
@@ -266,15 +243,16 @@ export function createSeed(size: SeedSize = "standard"): DB {
     grades: new Table<Grade>(
       Array.from({ length: 13 }, (_, i) => ({ id: `grade_${i + 1}`, number: i + 1, name: `Grade ${i + 1}`, level: LEVEL_OF(i + 1) })),
     ),
-    streams: new Table(STREAMS.map(([code, name]) => ({ id: `stream_${code.toLowerCase()}`, code, name }))),
+    streams: new Table(CURRICULUM_STREAMS.map(({ code, name, optionsRequired }) => ({ id: `stream_${code.toLowerCase()}`, code, name, optionsRequired }))),
     classes: new Table(),
     subjects: new Table<Subject>(
-      SUBJECTS.map(([code, name, levels, basket]) => ({
-        id: `sub_${code.toLowerCase()}`, code, name, levels, basket,
-        streamIds: levels.includes("al")
-          ? STREAMS.filter(([, , subs]) => subs.includes(code)).map(([c]) => `stream_${c.toLowerCase()}`)
-          : undefined,
-      })),
+      CURRICULUM_SUBJECTS.map(({ code, ...s }) => {
+        const inStreams = (list: "core" | "options") => CURRICULUM_STREAMS.filter((x) => x[list].includes(code)).map((x) => `stream_${x.code.toLowerCase()}`);
+        return {
+          ...s, id: `sub_${code.toLowerCase()}`, code, teacherIds: [],
+          ...(s.levels.includes("al") ? { streamIds: [...inStreams("core"), ...inStreams("options")], optionalStreamIds: inStreams("options") } : {}),
+        };
+      }),
     ),
     classSubjects: new Table(),
     timetables: [],
@@ -377,7 +355,7 @@ export function createSeed(size: SeedSize = "standard"): DB {
       if (code === "MAT" && i === 0) continue;
       const female = rng.chance(0.65);
       const { first, last } = teacherName(female);
-      const subjectName = SUBJECTS.find(([c]) => c === code)![1];
+      const subjectName = CURRICULUM_SUBJECTS.find((s) => s.code === code)!.name;
       const t = addStaff(female ? rng.pick(["Mrs.", "Ms."]) : "Mr.", first, last, `Teacher – ${subjectName}`);
       (specialists[code] ??= []).push(t);
     }
@@ -387,7 +365,7 @@ export function createSeed(size: SeedSize = "standard"): DB {
     const { first, last } = teacherName(true);
     primaryTeachers.push(addStaff(rng.pick(["Mrs.", "Ms."]), first, last, "Teacher – Primary"));
   }
-  specialists.GENG = specialists.ENG;
+  for (const [code, from] of Object.entries(SHARED_TEACHERS)) specialists[code] = specialists[from];
 
   // Staff user accounts
   const roleFor = (s: Staff): string[] => {
@@ -425,7 +403,7 @@ export function createSeed(size: SeedSize = "standard"): DB {
     const c: ClassSection = {
       id, yearId, gradeId: grade.id, section, name: `${grade.number}-${section}`,
       streamId: streamCode ? `stream_${streamCode.toLowerCase()}` : undefined,
-      room: `${grade.number <= 5 ? "P" : grade.number <= 11 ? "S" : "C"}${grade.number}${section.slice(0, 1)}`,
+      room: `${grade.number <= 5 ? "P" : grade.number <= 11 ? "S" : "C"}${grade.number}${grade.number <= 11 ? section.slice(0, 1) : section}`,
     };
     return db.classes.insert(c);
   };
@@ -444,11 +422,13 @@ export function createSeed(size: SeedSize = "standard"): DB {
         grade.level === "primary" ? PRIMARY_SUBJECTS
         : grade.level === "junior" ? JUNIOR_SUBJECTS
         : grade.level === "ol" ? [...OL_CORE, ...OL_BASKETS[1], ...OL_BASKETS[2], ...OL_BASKETS[3]]
-        : STREAMS.find(([code]) => code === section)![2];
+        : STREAM_OFFERS[section]!;
       for (const code of codes) {
         let teacherId = assignTeacher(code, grade.level, classTeacher);
         if (code === "MAT" && (grade.number === 10 || grade.number === 11)) teacherId = kasun.id;
-        db.classSubjects.insert({ id: `cs_${c.id.slice(9)}_${code.toLowerCase()}`, classId: c.id, subjectId: subjectId(code), teacherId });
+        const subject = db.subjects.get(subjectId(code))!;
+        const optionGroup = optionGroupFor(grade.level, subject, { optional: (subject.optionalStreamIds ?? []).includes(c.streamId ?? "") }) ?? undefined;
+        db.classSubjects.insert({ id: `cs_${c.id.slice(9)}_${code.toLowerCase()}`, classId: c.id, subjectId: subjectId(code), teacherId, optionGroup });
       }
     });
     // 2025 classes for history (one grade lower last year)
@@ -461,6 +441,12 @@ export function createSeed(size: SeedSize = "standard"): DB {
     const s = db.staff.get(c.classTeacherId);
     const u = users.get(s?.userId);
     if (u && !u.roleIds.includes("role_class_teacher")) u.roleIds.push("role_class_teacher");
+  }
+
+  // Each subject's teacher list: its specialists and whoever teaches it in a class (primary class teachers).
+  for (const subject of db.subjects.rows) {
+    const taught = db.classSubjects.rows.filter((cs) => cs.subjectId === subject.id).flatMap((cs) => (cs.teacherId ? [cs.teacherId] : []));
+    subject.teacherIds = [...new Set([...(specialists[subject.code] ?? []).map((t) => t.id), ...taught])];
   }
 
   // ---------- Students & guardians ----------
@@ -596,13 +582,19 @@ export function createSeed(size: SeedSize = "standard"): DB {
     ability.set(s.id, clamp(rng.normal(s.id === kavindu.id ? 74 : 60, 14), 22, 95));
     absentProne.set(s.id, clamp(rng.normal(0.045, 0.03), 0.005, 0.16));
   }
-  const subjectsFor = (s: Student) => {
-    const grade = db.grades.get(s.gradeId)!;
-    const css = db.classSubjects.rows.filter((cs) => cs.classId === s.classId);
-    if (grade.level !== "ol") return css;
-    const ol = new Set([...OL_CORE.map(subjectId), ...s.electiveSubjectIds]);
-    return css.filter((cs) => ol.has(cs.subjectId));
-  };
+  // Choices besides the O/L baskets, without using random numbers: religion and language follow the student; A/L options take turns.
+  const FAITH: Record<string, string> = { Buddhism: "BUD", Hinduism: "HIN", Islam: "ISL", Christianity: "CHR" };
+  db.students.rows.forEach((s, index) => {
+    const offered: OfferedSubject[] = db.classSubjects.rows.filter((cs) => cs.classId === s.classId);
+    const level = db.grades.get(s.gradeId)!.level;
+    if (level === "ol") s.electiveSubjectIds.push(subjectId(s.religion === "Hinduism" || s.religion === "Islam" ? "TML" : "SIN"), subjectId(FAITH[s.religion ?? ""] ?? "BUD"));
+    if (level === "al") {
+      const options = offered.filter((x) => x.optionGroup).map((x) => x.subjectId);
+      const needed = db.streams.get(db.classes.get(s.classId)!.streamId)?.optionsRequired ?? 0;
+      s.electiveSubjectIds = Array.from({ length: needed }, (_, i) => options[(index + i) % options.length]!);
+    }
+  });
+  const subjectsFor = (s: Student) => db.classSubjects.rows.filter((cs) => cs.classId === s.classId && (!cs.optionGroup || s.electiveSubjectIds.includes(cs.subjectId)));
   const activeStudents = db.students.rows.filter((s) => s.status === "active");
   const enterMark = (examId: string, s: Student, subId: string, drift: number) => {
     const offset = (subId.charCodeAt(4) % 7) - 3;

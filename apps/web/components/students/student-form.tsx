@@ -11,9 +11,10 @@ import { Field, FieldDescription, FieldError, FieldGroup, FieldLabel, FieldLegen
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
-import { useClasses, useDiscounts, useSubjects } from "@/lib/api/hooks";
+import { useClass, useClasses, useDiscounts } from "@/lib/api/hooks";
 import type { StudentDetail } from "@whizchool/shared/types";
 import { applyServerErrors } from "@/lib/forms";
+import { picksFor } from "@whizchool/shared/curriculum";
 import { DatePicker } from "@/components/shared/date-picker";
 
 const PHONE = /^0\d{2}\s?\d{3}\s?\d{4}$/;
@@ -43,10 +44,10 @@ export function StudentForm({
   onSubmit: (values: StudentFormValues) => Promise<void>;
 }) {
   const t = useTranslations("students.form");
+  const tg = useTranslations("academics.optionGroups");
   const tc = useTranslations("common");
   const ts = useTranslations("status");
   const classes = useClasses();
-  const subjects = useSubjects();
   const discounts = useDiscounts();
   const isNew = !student;
 
@@ -104,9 +105,13 @@ export function StudentForm({
   });
   const { errors, isSubmitting } = form.formState;
   const classId = useWatch({ control: form.control, name: "classId" });
-  const cls = classes.data?.find((c) => c.id === classId);
-  const isOL = cls ? cls.gradeNumber === 10 || cls.gradeNumber === 11 : false;
-  const baskets = ([1, 2, 3] as const).map((n) => ({ n, subjects: subjects.data?.filter((s) => s.basket === n && s.levels.includes("ol")) ?? [] }));
+  const { data: cls } = useClass(classId);
+  // Choices come from what the class offers. A change of class keeps only those that still apply (the API does the same).
+  const groups = [...new Set(cls?.subjects.flatMap((s) => (s.optionGroup ? [s.optionGroup] : [])) ?? [])].map((group) => ({
+    group,
+    options: cls!.subjects.filter((s) => s.optionGroup === group),
+    picks: picksFor(group, cls!.optionsRequired ?? 0),
+  }));
 
   const submit = form.handleSubmit(async (v) => {
     try {
@@ -207,41 +212,62 @@ export function StudentForm({
               />
               <FieldError>{errors.classId?.message}</FieldError>
             </Field>
-            {isOL && (
+            {!!groups.length && (
               <FieldSet>
                 <FieldLegend variant="label">{t("electives")}</FieldLegend>
                 <div className="grid gap-4 sm:grid-cols-3">
-                  {baskets.map(({ n, subjects: options }) => (
+                  {groups.map(({ group, options, picks }) => (
                     <Controller
-                      key={n}
+                      key={group}
                       control={form.control}
                       name="electiveSubjectIds"
                       render={({ field }) => {
-                        const current = field.value.find((id) => options.some((o) => o.id === id)) ?? "";
-                        return (
+                        const inGroup = (id: string) => options.some((o) => o.subjectId === id);
+                        const others = field.value.filter((id) => !inGroup(id));
+                        const chosen = field.value.filter(inGroup);
+                        return picks === 1 ? (
                           <Field>
-                            <FieldLabel>{t("basket", { n })}</FieldLabel>
-                            <Select
-                              value={current}
-                              onValueChange={(v) => field.onChange([...field.value.filter((id) => !options.some((o) => o.id === id)), v])}
-                            >
+                            <FieldLabel>{tg(group as "options")}</FieldLabel>
+                            <Select value={chosen[0] ?? ""} onValueChange={(v) => field.onChange([...others, v])}>
                               <SelectTrigger className="w-full">
                                 <SelectValue placeholder={tc("selectPlaceholder")} />
                               </SelectTrigger>
                               <SelectContent>
                                 {options.map((o) => (
-                                  <SelectItem key={o.id} value={o.id}>
-                                    {o.name}
+                                  <SelectItem key={o.subjectId} value={o.subjectId}>
+                                    {o.subjectName}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
                             </Select>
+                          </Field>
+                        ) : (
+                          <Field className="sm:col-span-3">
+                            <FieldLabel>
+                              {tg(group as "options")}: {t("pickSome", { count: picks })}
+                            </FieldLabel>
+                            <div className="grid gap-2 sm:grid-cols-3">
+                              {options.map((o) => {
+                                const on = chosen.includes(o.subjectId);
+                                return (
+                                  <label key={o.subjectId} className="flex items-center gap-2 text-sm">
+                                    <Checkbox
+                                      checked={on}
+                                      disabled={!on && chosen.length >= picks}
+                                      onCheckedChange={(c) => field.onChange(c ? [...field.value, o.subjectId] : field.value.filter((id) => id !== o.subjectId))}
+                                    />
+                                    {o.subjectName}
+                                  </label>
+                                );
+                              })}
+                            </div>
                           </Field>
                         );
                       }}
                     />
                   ))}
                 </div>
+                <FieldError>{errors.electiveSubjectIds?.message}</FieldError>
               </FieldSet>
             )}
           </FieldGroup>

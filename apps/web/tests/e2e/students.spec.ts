@@ -35,12 +35,12 @@ test("admin manages a student's photo, documents and guardians", async ({ page }
   await page.getByRole("tab", { name: "Guardians" }).click();
   await page.getByRole("button", { name: "Add guardian" }).click();
   const dialog = page.getByRole("dialog");
-  await dialog.getByLabel("Name", { exact: true }).fill("Mr. Ruwan Perera");
+  await dialog.getByLabel("Name", { exact: true }).fill("Mr. Ruwan Wijewardena");
   await dialog.getByLabel("Phone", { exact: true }).fill("071 999 8888");
   await dialog.getByLabel("Email", { exact: true }).fill("ruwan.p@example.com");
   await dialog.getByRole("button", { name: "Add guardian" }).click();
   await expect(page.getByText("Guardian added.")).toBeVisible();
-  await expect(page.getByText("Mr. Ruwan Perera")).toBeVisible();
+  await expect(page.getByText("Mr. Ruwan Wijewardena")).toBeVisible();
   await page.getByRole("button", { name: "Remove" }).last().click();
   await page.getByRole("alertdialog").getByRole("button", { name: "Remove" }).click();
   await expect(page.getByText("Guardian removed.")).toBeVisible();

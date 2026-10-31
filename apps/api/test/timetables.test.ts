@@ -54,11 +54,13 @@ describe("timetable writes", () => {
     expect(has("Accountant", "timetable.view")).toBe(false);
 
     // The migration's own statements, on a role that has lost them, as one from before this feature would.
+    const original = roles.find((r) => r.name === "Subject Teacher")!.permissions;
     await prisma.role.update({ where: { name: "Subject Teacher" }, data: { permissions: { set: ["dashboard.view"] } } });
     await prisma.$executeRaw`UPDATE "Role" SET "permissions" = array_append("permissions", 'timetable.view')
       WHERE "name" IN ('Admin', 'Principal', 'Class Teacher', 'Subject Teacher', 'Office Staff') AND NOT 'timetable.view' = ANY("permissions")`;
     const after = await prisma.role.findUniqueOrThrow({ where: { name: "Subject Teacher" } });
     expect(after.permissions).toContain("timetable.view");
+    await prisma.role.update({ where: { name: "Subject Teacher" }, data: { permissions: { set: original } } });
     expect((await prisma.role.findUniqueOrThrow({ where: { name: "Principal" } })).permissions.filter((p) => p === "timetable.view")).toHaveLength(1);
   });
 });

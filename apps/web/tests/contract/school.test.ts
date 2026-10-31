@@ -87,7 +87,7 @@ describe("classes", () => {
   it("lists the current year's classes in grade order, for staff only", async () => {
     await login("teacher");
     const classes: Json[] = await get("/classes");
-    expect(classes).toHaveLength(30);
+    expect(classes).toHaveLength(34);
     expect(classes[0]).toMatchObject({ name: "1-A", gradeNumber: 1 });
     expect(classes.find((c) => c.id === "cls_2026_10a")).toMatchObject({ classTeacherName: "Mr. Kasun Fernando" });
     await login("parent");
@@ -129,7 +129,7 @@ describe("classes", () => {
     const al = await call("POST", "/classes", { gradeId: "grade_12", section: "COM2", streamId: commerce.id });
     expect(al).toMatchObject({ name: "12-COM2", streamName: commerce.name });
     const alSubjects = (await get(`/classes/${al.id}`)).subjects.map((s: Json) => s.subjectName).sort();
-    expect(alSubjects).toEqual(["Accounting", "Business Studies", "Economics", "General English"]);
+    expect(alSubjects).toEqual(["Accounting", "Business Statistics", "Business Studies", "Common General Test", "Economics", "General English", "Information & Communication Technology"]);
   });
 
   it("changes class teachers and subject teachers", async () => {
@@ -142,6 +142,8 @@ describe("classes", () => {
     const lessons = (await get("/classes/cls_2026_7b/timetable", { version: "published" })).blocks.filter((b: Json) => b.classSubjectId === maths.id);
     const busy = new Set(board.busy.filter((b: Json) => lessons.some((m: Json) => m.day === b.day && m.start < b.end && b.start < m.end)).map((b: Json) => b.teacherId));
     const other = staff.find((s) => s.id !== maths.teacherId && s.designation.startsWith("Teacher") && !busy.has(s.id));
+    const mathsSubject = (await get("/subjects")).find((s: Json) => s.id === maths.subjectId);
+    await call("PUT", `/subjects/${mathsSubject.id}`, { name: mathsSubject.name, levels: mathsSubject.levels, choiceGroup: mathsSubject.choiceGroup, teacherIds: [...mathsSubject.teacherIds, other.id] });
     await call("PUT", `/class-subjects/${maths.id}`, { teacherId: other.id });
     expect((await get("/classes/cls_2026_7b")).subjects.find((s: Json) => s.id === maths.id).teacherName).toBe(other.name);
     await expectStatus(422, call("PUT", `/class-subjects/${maths.id}`, { teacherId: "st_nope" }));

@@ -4,19 +4,20 @@ import { use, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { CalendarCheck, CalendarDays } from "lucide-react";
+import { CalendarCheck, CalendarDays, X } from "lucide-react";
+import { gradeLevelOf } from "@whizchool/shared/curriculum";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DataTable } from "@/components/shared/data-table";
 import { FilterSelect } from "@/components/shared/filters";
+import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { PageHeader } from "@/components/shared/page-header";
 import { ErrorState, PageSkeleton } from "@/components/shared/states";
 import { api } from "@/lib/api/client";
-import { useApiMutation, useClass, useStaff } from "@/lib/api/hooks";
+import { useApiMutation, useClass, useStaff, useSubjects } from "@/lib/api/hooks";
 import type { ClassDetail } from "@whizchool/shared/types";
 import { useCan, useSession } from "@/lib/auth";
 import { formatMoney } from "@/lib/format";
@@ -135,41 +136,86 @@ function ClassSettings({ c }: { c: ClassDetail }) {
 
 function SubjectTeachers({ c, editable }: { c: ClassDetail; editable: boolean }) {
   const t = useTranslations("academics.classes.detail");
+  const tg = useTranslations("academics.optionGroups");
   const staff = useStaff();
+  const catalogue = useSubjects();
+  const refresh = [["class", c.id], ["timetable", c.id]];
   const assign = useApiMutation((v: { id: string; teacherId: string }) => api.put(`/class-subjects/${v.id}`, { teacherId: v.teacherId }), {
     invalidate: [["class", c.id]],
     success: t("teacherSaved"),
   });
-  const teachers = (staff.data ?? []).filter((s) => s.designation.startsWith("Teacher")).map((s) => ({ value: s.id, label: s.name }));
+  const add = useApiMutation((subjectId: string) => api.post(`/classes/${c.id}/subjects`, { subjectId }), { invalidate: refresh, success: t("subjectAdded") });
+  const remove = useApiMutation((id: string) => api.delete(`/class-subjects/${id}`), { invalidate: refresh, success: t("subjectRemoved") });
+  const [removing, setRemoving] = useState<{ id: string; name: string } | null>(null);
+  const allTeachers = (staff.data ?? []).filter((s) => s.designation.startsWith("Teacher"));
+  const nameOf = new Map((staff.data ?? []).map((s) => [s.id, s.name]));
+  /** The subject's teacher list, or every teacher while it has none; the current teacher always stays selectable. */
+  const optionsFor = (s: ClassDetail["subjects"][number]) => {
+    const listed = catalogue.data?.find((x) => x.id === s.subjectId)?.teacherIds ?? [];
+    const ids = listed.length ? [...new Set([...listed, ...(s.teacherId ? [s.teacherId] : [])])] : allTeachers.map((x) => x.id);
+    return ids.map((id) => ({ value: id, label: nameOf.get(id) ?? id }));
+  };
+  const level = gradeLevelOf(c.gradeNumber);
+  const offered = new Set(c.subjects.map((s) => s.subjectId));
+  const canAdd = (catalogue.data ?? []).filter((s) => s.levels.includes(level) && !offered.has(s.id) && (level !== "al" || s.streamIds?.includes(c.streamId ?? "")));
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead className="pl-6">{t("subject")}</TableHead>
-          <TableHead className="pr-6">{t("teacher")}</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
+    <>
+      <ul className="divide-y border-t">
         {c.subjects.map((s) => (
-          <TableRow key={s.id}>
-            <TableCell className="pl-6 align-middle text-sm">{s.subjectName}</TableCell>
-            <TableCell className="pr-6">
-              {editable ? (
-                <FilterSelect
-                  ariaLabel={`${t("teacher")} – ${s.subjectName}`}
-                  value={s.teacherId ?? ""}
-                  onChange={(v) => assign.mutate({ id: s.id, teacherId: v })}
-                  allLabel={t("unassigned")}
-                  options={teachers}
-                  className="h-8 sm:w-full"
-                />
-              ) : (
-                <span className="text-sm">{s.teacherName ?? t("unassigned")}</span>
-              )}
-            </TableCell>
-          </TableRow>
+          <li key={s.id} className="px-6 py-2">
+            <p className="text-sm">
+              {s.subjectName}
+              {s.optionGroup && <span className="ml-2 text-xs text-muted-foreground">{tg(s.optionGroup as "options")}</span>}
+            </p>
+            {editable ? (
+              <div className="mt-1 flex items-center gap-1">
+                <div className="min-w-0 flex-1">
+                  <FilterSelect
+                    ariaLabel={`${t("teacher")} – ${s.subjectName}`}
+                    value={s.teacherId ?? ""}
+                    onChange={(v) => assign.mutate({ id: s.id, teacherId: v })}
+                    allLabel={t("unassigned")}
+                    options={optionsFor(s)}
+                    className="h-8 sm:w-full"
+                  />
+                </div>
+                <Button variant="ghost" size="icon-sm" aria-label={t("removeSubject", { name: s.subjectName })} onClick={() => setRemoving({ id: s.id, name: s.subjectName })}>
+                  <X />
+                </Button>
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">{s.teacherName ?? t("unassigned")}</p>
+            )}
+          </li>
         ))}
-      </TableBody>
-    </Table>
+      </ul>
+      {(c.pendingChoices > 0 || !!c.optionsRequired) && (
+        <div className="space-y-1 px-6 pt-3 text-sm text-muted-foreground">
+          {!!c.optionsRequired && <p>{t("pickOptions", { count: c.optionsRequired })}</p>}
+          {c.pendingChoices > 0 && <p>{t("pendingChoices", { count: c.pendingChoices })}</p>}
+        </div>
+      )}
+      {editable && !!canAdd.length && (
+        <div className="px-6 pt-3">
+          <FilterSelect
+            ariaLabel={t("addSubject")}
+            value=""
+            onChange={(v) => v && add.mutate(v)}
+            allLabel={t("addSubject")}
+            options={canAdd.map((s) => ({ value: s.id, label: s.examNo ? `${s.name} (${s.examNo})` : s.name }))}
+            className="h-8 sm:w-full"
+          />
+        </div>
+      )}
+      <ConfirmDialog
+        open={!!removing}
+        onOpenChange={(o) => !o && setRemoving(null)}
+        title={t("removeTitle", { name: removing?.name ?? "" })}
+        description={t("removeDescription")}
+        confirmLabel={t("remove")}
+        destructive
+        onConfirm={() => remove.mutateAsync(removing!.id).catch(() => undefined)}
+      />
+    </>
   );
 }

@@ -43,7 +43,7 @@ const toTerm = (t: Prisma.TermGetPayload<object>): Term => ({
   endDate: toIsoDate(t.endDate),
 });
 
-const subjectInclude = { streams: { select: { streamId: true } } } satisfies Prisma.SubjectInclude;
+const subjectInclude = { streams: { select: { streamId: true, optional: true } }, teachers: { select: { staffId: true } } } satisfies Prisma.SubjectInclude;
 
 function toSubject(s: Prisma.SubjectGetPayload<{ include: typeof subjectInclude }>): Subject {
   return {
@@ -52,7 +52,11 @@ function toSubject(s: Prisma.SubjectGetPayload<{ include: typeof subjectInclude 
     code: s.code,
     levels: s.levels,
     ...(s.basket ? { basket: s.basket as Subject["basket"] } : {}),
+    ...(s.choiceGroup ? { choiceGroup: s.choiceGroup as Subject["choiceGroup"] } : {}),
+    ...(s.examNo ? { examNo: s.examNo } : {}),
     ...(s.streams.length ? { streamIds: s.streams.map((x) => x.streamId) } : {}),
+    ...(s.streams.some((x) => x.optional) ? { optionalStreamIds: s.streams.filter((x) => x.optional).map((x) => x.streamId) } : {}),
+    teacherIds: s.teachers.map((t) => t.staffId),
   };
 }
 
@@ -117,7 +121,40 @@ const subjectBody = z.object({
     .union([z.literal(""), z.null(), z.coerce.number().int().min(1, "Choose basket 1, 2 or 3").max(3, "Choose basket 1, 2 or 3")])
     .optional()
     .transform((b) => (typeof b === "number" ? b : null)),
+  // O/L: compulsory, but each student takes one of the group.
+  choiceGroup: z
+    .enum(["first_language", "religion", ""])
+    .nullish()
+    .transform((g) => g || null),
+  examNo: z
+    .string()
+    .trim()
+    .max(6)
+    .nullish()
+    .transform((n) => n || null),
+  // Left out, a subject's teachers stay as they are.
+  teacherIds: z.array(z.string().max(100)).max(200).optional(),
 });
+
+/** A subject's teachers must be active staff; one still teaching it in a class stays on the list until replaced there. */
+async function checkSubjectTeachers(subjectId: string | null, teacherIds: string[] | undefined) {
+  if (!teacherIds) return undefined;
+  const ids = [...new Set(teacherIds)];
+  const active = await prisma.staff.count({ where: { id: { in: ids }, status: "active" } });
+  if (active !== ids.length) throw new ApiError(422, "validation", "Choose active staff members.", { teacherIds: "Choose active staff members" });
+  if (subjectId && ids.length) {
+    const school = await prisma.school.findUniqueOrThrow({ where: { id: "school" }, select: { currentYearId: true } });
+    const still = await prisma.classSubject.findFirst({
+      where: { subjectId, teacherId: { notIn: ids, not: null }, class: { yearId: school.currentYearId ?? undefined } },
+      select: { class: { select: { name: true } }, teacher: { select: { name: true } } },
+    });
+    if (still) {
+      const message = `${still.teacher!.name} still teaches this subject in ${still.class.name}. Choose another teacher there first.`;
+      throw new ApiError(409, "still_teaching", message, { teacherIds: message });
+    }
+  }
+  return ids;
+}
 
 const bandsBody = z.object({
   bands: z
@@ -250,8 +287,20 @@ export const schoolRoutes = [
       if (await prisma.subject.findUnique({ where: { code: body.code }, select: { id: true } })) {
         throw new ApiError(409, "duplicate", "Code already in use.", { code: "Already in use" });
       }
+      const teacherIds = await checkSubjectTeachers(null, body.teacherIds);
       const subject = await prisma.$transaction(async (tx) => {
-        const s = await tx.subject.create({ data: { name: body.name, code: body.code, levels: body.levels, basket: body.basket }, include: subjectInclude });
+        const s = await tx.subject.create({
+          data: {
+            name: body.name,
+            code: body.code,
+            levels: body.levels,
+            basket: body.basket,
+            choiceGroup: body.choiceGroup,
+            examNo: body.examNo,
+            ...(teacherIds ? { teachers: { create: teacherIds.map((staffId) => ({ staffId })) } } : {}),
+          },
+          include: subjectInclude,
+        });
         await audit(tx, auth, { action: "subject.create", entity: "Subject", entityId: s.id, summary: `Added subject ${s.name} (${s.code})` });
         return s;
       });
@@ -262,13 +311,25 @@ export const schoolRoutes = [
     method: "PUT",
     path: "/subjects/:id",
     access: { permission: "settings.edit" },
-    summary: "Rename a subject or change its levels and basket (the code is permanent)",
+    summary: "Rename a subject or change its levels, basket and teachers (the code is permanent)",
     body: subjectBody,
     handler: async ({ auth, params, body }) => {
       const before = await prisma.subject.findUnique({ where: { id: params.id } });
       if (!before) throw new ApiError(404, "not_found", "Subject not found.");
+      const teacherIds = await checkSubjectTeachers(before.id, body.teacherIds);
       const subject = await prisma.$transaction(async (tx) => {
-        const s = await tx.subject.update({ where: { id: before.id }, data: { name: body.name, levels: body.levels, basket: body.basket }, include: subjectInclude });
+        const s = await tx.subject.update({
+          where: { id: before.id },
+          data: {
+            name: body.name,
+            levels: body.levels,
+            basket: body.basket,
+            choiceGroup: body.choiceGroup,
+            examNo: body.examNo,
+            ...(teacherIds ? { teachers: { deleteMany: {}, create: teacherIds.map((staffId) => ({ staffId })) } } : {}),
+          },
+          include: subjectInclude,
+        });
         await audit(tx, auth, {
           action: "subject.update",
           entity: "Subject",

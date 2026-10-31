@@ -324,7 +324,18 @@
       "levels": "Taught in",
       "basket": "O/L basket",
       "core": "Core",
-      "saved": "Subject saved."
+      "saved": "Subject saved.",
+      "examNo": "Exam no.",
+      "group": "Students take",
+      "basketLabel": "Basket {n}",
+      "teachers": "Teachers",
+      "teachersHint": "A class's teacher for this subject comes from this list.",
+      "noTeachers": "No teachers yet",
+      "teacherCount": "{count, plural, one {# teacher} other {# teachers}}",
+      "allLevels": "All levels",
+      "first_language": "One first language",
+      "religion": "One religion",
+      "byStream": "Depends on stream"
     },
     "grading": {
       "description": "Marks out of 100 are converted to these grades on mark sheets and report cards.",

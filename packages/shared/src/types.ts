@@ -117,6 +117,8 @@ export interface Stream {
   id: ID;
   name: string;
   code: string;
+  /** How many of the stream's optional subjects each student takes. */
+  optionsRequired: number;
 }
 
 export interface ClassSection {
@@ -145,7 +147,16 @@ export interface Subject {
   levels: GradeLevel[];
   /** O/L basket number for electives (1-3); undefined = core */
   basket?: 1 | 2 | 3;
+  /** O/L: compulsory, but each student takes one of the group (first language, religion). */
+  choiceGroup?: "first_language" | "religion";
+  /** The Department of Examinations' subject number, e.g. "10" or "25A". */
+  examNo?: string;
+  /** A/L streams that offer this subject. */
   streamIds?: ID[];
+  /** Of those, the streams where students choose it (the rest take it anyway). */
+  optionalStreamIds?: ID[];
+  /** The staff who teach this subject. A class's teacher for it comes from this list. */
+  teacherIds: ID[];
 }
 
 export interface ClassSubject {
@@ -153,11 +164,17 @@ export interface ClassSubject {
   classId: ID;
   subjectId: ID;
   teacherId?: ID;
+  /** Students choose within this group (e.g. basket1, religion, options); empty means everyone takes it. */
+  optionGroup?: string;
 }
 
 export interface ClassDetail extends ClassSummary {
   subjects: (ClassSubject & { subjectName: string; teacherName?: string })[];
   students: StudentListItem[];
+  /** A/L: how many of the optional subjects each student takes. */
+  optionsRequired?: number;
+  /** Active students who still have subjects to choose. */
+  pendingChoices: number;
 }
 
 export interface GradeBand {
@@ -754,8 +771,8 @@ export interface TimetableBlock extends TimetableBlockInput {
   subjectName?: string;
   /** Short name, for lessons running side by side. */
   subjectCode?: string;
-  /** O/L elective basket: subjects from one basket can run side by side. */
-  basket?: number;
+  /** The choice this subject belongs to in the class; subjects of one group can run side by side. */
+  optionGroup?: string;
   teacherId?: ID;
   teacherName?: string;
 }
@@ -766,7 +783,7 @@ export interface TimetableSubject {
   subjectId: ID;
   subjectName: string;
   subjectCode: string;
-  basket?: number;
+  optionGroup?: string;
   teacherId?: ID;
   teacherName?: string;
 }

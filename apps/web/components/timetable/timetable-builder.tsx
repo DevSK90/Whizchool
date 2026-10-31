@@ -51,7 +51,7 @@ const toInput = ({ day, start, end, kind, classSubjectId, label, room }: Timetab
 /** A block as the board shows it: the subject's name and teacher come from the class's subjects. */
 function resolve(b: TimetableBlockInput & { id: string }, subjects: TimetableSubject[]): TimetableBlock {
   const s = b.kind === "lesson" ? subjects.find((x) => x.id === b.classSubjectId) : undefined;
-  return { ...b, subjectId: s?.subjectId, subjectName: s?.subjectName, basket: s?.basket, teacherId: s?.teacherId, teacherName: s?.teacherName };
+  return { ...b, subjectId: s?.subjectId, subjectName: s?.subjectName, optionGroup: s?.optionGroup, teacherId: s?.teacherId, teacherName: s?.teacherName };
 }
 
 export function TimetableBuilder({ view, classes }: { view: ClassTimetableView; classes: ClassSummary[] }) {
@@ -437,6 +437,7 @@ export function TimetableBuilder({ view, classes }: { view: ClassTimetableView; 
 
 function TrayCard({ item, count, onClick }: { item: TrayItem; count?: number; onClick: () => void }) {
   const t = useTranslations("academics.timetables");
+  const tg = useTranslations("academics.optionGroups");
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: `tray:${item.key}`, data: { item } });
   const s = item.subject;
   return (
@@ -454,7 +455,7 @@ function TrayCard({ item, count, onClick }: { item: TrayItem; count?: number; on
       <span className="min-w-0 flex-1">
         <span className="block truncate font-medium">
           {s?.subjectName ?? item.label}
-          {s?.basket != null && <span className="ml-1 font-normal text-muted-foreground">{t("basket", { n: s.basket })}</span>}
+          {s?.optionGroup && <span className="ml-1 font-normal text-muted-foreground">{tg(s.optionGroup as "options")}</span>}
         </span>
         {s && <span className={cn("block truncate", s.teacherName ? "text-muted-foreground" : "text-amber-700 dark:text-amber-400")}>{s.teacherName ?? t("noTeacher")}</span>}
         {count !== undefined && <span className="block text-muted-foreground">{t("lessons", { count })}</span>}

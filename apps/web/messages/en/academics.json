@@ -21,7 +21,18 @@
       "saved": "Class updated.",
       "teacherSaved": "Teacher assigned.",
       "edit": "Edit class",
-      "takeAttendance": "Take attendance"
+      "takeAttendance": "Take attendance",
+      "addSubject": "Add a subject",
+      "subjectAdded": "Subject added.",
+      "subjectRemoved": "Subject removed.",
+      "removeSubject": "Remove {name}",
+      "removeTitle": "Stop offering {name} in this class?",
+      "removeDescription": "Its draft timetable lessons are removed too.",
+      "remove": "Remove",
+      "compulsory": "Everyone",
+      "pendingChoices": "{count, plural, one {# student still has subjects to choose.} other {# students still have subjects to choose.}} Choose them on each student's page.",
+      "pickOptions": "Each student takes {count} of the options.",
+      "noList": "No teacher list yet for this subject, so all teachers are shown."
     },
     "create": {
       "title": "Add a class",
@@ -304,7 +315,6 @@
     "assembly": "Assembly",
     "noSubjects": "This class has no subjects yet.",
     "noTeacher": "No teacher",
-    "basket": "Basket {n}",
     "lessons": "{count, plural, =0 {Not placed} one {# lesson} other {# lessons}}",
     "hint": "Drag a subject onto the board. Drag a block to move it, or its bottom edge to resize. Click a block for exact times.",
     "emptyBoard": "Nothing here yet. Drag a subject from the left to start.",
@@ -337,5 +347,13 @@
     "fullWeek": "Full week",
     "open": "Timetable",
     "schoolDay": "School day"
+  },
+  "optionGroups": {
+    "first_language": "First language",
+    "religion": "Religion",
+    "basket1": "Basket I",
+    "basket2": "Basket II",
+    "basket3": "Basket III",
+    "options": "Option"
   }
 }

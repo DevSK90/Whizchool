@@ -35,8 +35,7 @@
     "religion": "Religion",
     "address": "Home address",
     "class": "Class",
-    "electives": "O/L basket subjects",
-    "basket": "Basket {n}",
+    "electives": "Subject choices",
     "medical": "Medical",
     "bloodGroup": "Blood group",
     "allergies": "Allergies",
@@ -52,7 +51,8 @@
     "create": "Add student",
     "created": "{name} added with admission no. {admissionNo}.",
     "updated": "Student details saved.",
-    "inviteLink": "Parent invitation link (demo): {link}"
+    "inviteLink": "Parent invitation link (demo): {link}",
+    "pickSome": "Choose {count}"
   },
   "profile": {
     "back": "Students",

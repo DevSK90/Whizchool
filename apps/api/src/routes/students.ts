@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { ApiError } from "@whizchool/shared/api";
+import { sitsSubject } from "@whizchool/shared/curriculum";
 import { normalizeLocalPhone } from "@whizchool/shared/phone";
 import type { Discount, Guardian, StudentAttendance, StudentDetail, StudentDocument } from "@whizchool/shared/types";
 import { audit } from "../audit";
@@ -14,7 +15,7 @@ import type { Prisma } from "../generated/prisma/client";
 import { listQuery, omitNulls, page, parseSort } from "../http/list";
 import { defineRoute } from "../http/route";
 import { currentYearId, schoolName } from "../school";
-import { createStudent, nameWithInitials } from "../services/students";
+import { createStudent, nameWithInitials, checkedChoices } from "../services/students";
 import { toFileRef } from "../storage";
 import { balances, fullName, studentListInclude, toStudentListItems } from "../students";
 
@@ -117,9 +118,9 @@ export async function studentDetail(auth: AuthContext, id: string): Promise<Stud
   const attended = att.filter((a) => a.status === "present" || a.status === "late").reduce((n, a) => n + a._count._all, 0);
   const showFees = auth.session.kind === "parent" || auth.session.permissions.includes("fees.view");
   const electives = new Set(s.subjects.map((x) => x.subjectId));
-  // O/L students take the core subjects plus their chosen basket electives; others take all.
+  // Students take what everyone takes, plus what they chose in the class's option groups.
   const subjects = s.class.subjects
-    .filter((cs) => s.grade.level !== "ol" || cs.subject.basket === null || electives.has(cs.subjectId))
+    .filter((cs) => sitsSubject(cs.optionGroup, cs.subjectId, electives))
     .map((cs) => ({ id: cs.subjectId, name: cs.subject.name }));
 
   return {
@@ -310,8 +311,7 @@ export const studentRoutes = [
       const cls = await prisma.classSection.findUnique({ where: { id: body.classId }, select: { id: true, yearId: true, gradeId: true, name: true } });
       const yearId = await currentYearId();
       if (!cls || cls.yearId !== yearId) throw new ApiError(422, "validation", "Choose a class from this year.", { classId: "Choose a class" });
-      const offered = new Set((await prisma.classSubject.findMany({ where: { classId: cls.id }, select: { subjectId: true } })).map((s) => s.subjectId));
-      const electives = body.electiveSubjectIds ? [...new Set(body.electiveSubjectIds)].filter((id) => offered.has(id)) : undefined;
+      const electives = body.electiveSubjectIds ? await checkedChoices(prisma, cls.id, body.electiveSubjectIds) : undefined;
       const discounts = body.discountIds ? [...new Set(body.discountIds)] : undefined;
       if (discounts?.length && (await prisma.discount.count({ where: { id: { in: discounts } } })) !== discounts.length) {
         throw new ApiError(422, "validation", "Choose discounts from the list.", { discountIds: "Unknown discount" });

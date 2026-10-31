@@ -41,11 +41,11 @@ export async function seedDemoSchool(db: Db, size: SeedSize = "standard") {
   );
   await insert(
     db.subject,
-    demo.subjects.rows.map(({ streamIds: _, basket, ...s }) => ({ ...s, basket: basket ?? null })),
+    demo.subjects.rows.map(({ streamIds: _, optionalStreamIds: __, teacherIds: ___, basket, choiceGroup, examNo, ...s }) => ({ ...s, basket: basket ?? null, choiceGroup: choiceGroup ?? null, examNo: examNo ?? null })),
   );
   await insert(
     db.subjectStream,
-    demo.subjects.rows.flatMap((s) => (s.streamIds ?? []).map((streamId) => ({ subjectId: s.id, streamId }))),
+    demo.subjects.rows.flatMap((s) => (s.streamIds ?? []).map((streamId) => ({ subjectId: s.id, streamId, optional: (s.optionalStreamIds ?? []).includes(streamId) }))),
   );
   await insert(db.gradeBand, demo.gradeBands);
   await insert(db.role, demo.roles.rows.map(({ userCount: _, ...r }) => r));
@@ -97,7 +97,8 @@ export async function seedDemoSchool(db: Db, size: SeedSize = "standard") {
     db.classSection,
     demo.classes.rows.map((c) => ({ ...c, streamId: c.streamId ?? null, classTeacherId: c.classTeacherId ?? null, room: c.room ?? null })),
   );
-  await insert(db.classSubject, demo.classSubjects.rows.map((cs) => ({ ...cs, teacherId: cs.teacherId ?? null })));
+  await insert(db.classSubject, demo.classSubjects.rows.map((cs) => ({ ...cs, teacherId: cs.teacherId ?? null, optionGroup: cs.optionGroup ?? null })));
+  await insert(db.subjectTeacher, demo.subjects.rows.flatMap((s) => s.teacherIds.map((staffId) => ({ subjectId: s.id, staffId }))));
   await insert(
     db.classTimetable,
     demo.timetables.map((t) => ({ ...t, publishedAt: opt(t.publishedAt, at), publishedRevision: t.publishedRevision ?? null, publishedBy: t.publishedBy ?? null, savedBy: t.savedBy ?? null })),

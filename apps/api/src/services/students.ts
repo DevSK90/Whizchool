@@ -1,4 +1,5 @@
 import { ApiError } from "@whizchool/shared/api";
+import { keepChoices, tooManyChoices } from "@whizchool/shared/curriculum";
 import { sameGuardianName } from "@whizchool/shared/people";
 import { normalizeLocalPhone } from "@whizchool/shared/phone";
 import type { Relationship } from "../generated/prisma/client";
@@ -11,6 +12,21 @@ import { audit } from "../audit";
 import { createFirstInvoice } from "./invoices";
 
 type Tx = Prisma.TransactionClient;
+
+/** A student's choices, kept to what the class offers; refuses more than a group allows. */
+export async function checkedChoices(db: Pick<Tx, "classSection">, classId: string, electives: string[]) {
+  const cls = await db.classSection.findUniqueOrThrow({
+    where: { id: classId },
+    select: { stream: { select: { optionsRequired: true } }, subjects: { select: { subjectId: true, optionGroup: true } } },
+  });
+  const kept = keepChoices(cls.subjects, electives);
+  const tooMany = tooManyChoices(cls.subjects, kept, cls.stream?.optionsRequired ?? 0);
+  if (tooMany) {
+    const message = `Choose ${tooMany.allowed === 1 ? "one subject" : `${tooMany.allowed} subjects`} from each group.`;
+    throw new ApiError(422, "validation", message, { electiveSubjectIds: message });
+  }
+  return kept;
+}
 
 export interface GuardianInput {
   name: string;
@@ -144,9 +160,7 @@ export async function createStudent(tx: Tx, auth: AuthContext | null, input: New
       },
     }));
 
-  const classSubjects = await tx.classSubject.findMany({ where: { classId: cls.id }, select: { subjectId: true } });
-  const offered = new Set(classSubjects.map((s) => s.subjectId));
-  const electives = [...new Set(input.electiveSubjectIds ?? [])].filter((id) => offered.has(id));
+  const electives = await checkedChoices(tx, cls.id, input.electiveSubjectIds ?? []);
   const discountIds = [...new Set(input.discountIds ?? [])];
   if (discountIds.length && (await tx.discount.count({ where: { id: { in: discountIds } } })) !== discountIds.length) {
     throw new ApiError(422, "validation", "Choose discounts from the list.", { discountIds: "Unknown discount" });

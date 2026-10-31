@@ -37,7 +37,7 @@ async function planContext() {
   const year = await prisma.academicYear.findUniqueOrThrow({ where: { id: await currentYearId() } });
   const classes = await prisma.classSection.findMany({
     where: { yearId: year.id },
-    include: { grade: true, subjects: { select: { subjectId: true, teacherId: true } } },
+    include: { grade: true, subjects: { select: { subjectId: true, teacherId: true, optionGroup: true } } },
   });
   const targets = new Map(classes.map((c) => [targetId(c.grade.number, c.name), c]));
   const students = await prisma.student.findMany({
@@ -202,7 +202,7 @@ export const promotionRoutes = [
                   streamId: c.streamId,
                   classTeacherId: c.classTeacherId,
                   room: c.room,
-                  subjects: { create: c.subjects.map((cs) => ({ subjectId: cs.subjectId, teacherId: cs.teacherId })) },
+                  subjects: { create: c.subjects.map((cs) => ({ subjectId: cs.subjectId, teacherId: cs.teacherId, optionGroup: cs.optionGroup })) },
                 },
               });
               newId = created.id;
