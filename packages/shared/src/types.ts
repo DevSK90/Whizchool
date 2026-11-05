@@ -294,6 +294,8 @@ export interface StudentDetail extends Student {
   history: { yearName: string; className: string }[];
   photoUrl?: string;
   documents: StudentDocument[];
+  /** Absent when the class has nothing to choose. */
+  subjectChoices?: "pending" | "done";
 }
 
 export type DocumentKind = "birth_certificate" | "photo" | "report" | "medical" | "other";
@@ -341,11 +343,12 @@ export interface ApplicationInput {
     name: string;
     relationship: Guardian["relationship"];
     phone: string;
-    email: string;
+    /** Required on the public form; a parent at the office may not have one. */
+    email?: string;
     nic?: string;
     occupation?: string;
   };
-  documents: { name: string; size: number; kind: "birth_certificate" | "report" | "photo" | "other"; fileId?: ID }[];
+  documents: { name: string; size: number; kind: "birth_certificate" | "report" | "photo" | "other"; fileId?: ID; /** A signed link to open it; only on what staff read. */ url?: string }[];
 }
 
 export interface Application extends ApplicationInput {
@@ -354,6 +357,8 @@ export interface Application extends ApplicationInput {
   stage: ApplicationStage;
   submittedAt: DateTimeString;
   interviewAt?: DateTimeString;
+  /** Set on acceptance: the day the student comes to enrol, and the first day Enroll works. */
+  enrollmentDate?: DateString;
   enrolledStudentId?: ID;
   timeline: { stage: ApplicationStage; at: DateTimeString; by: string; note?: string }[];
 }
@@ -368,6 +373,7 @@ export interface ApplicationListItem {
   stage: ApplicationStage;
   submittedAt: DateTimeString;
   interviewAt?: DateTimeString;
+  enrollmentDate?: DateString;
 }
 
 export interface ApplicationStatusView {
@@ -377,6 +383,7 @@ export interface ApplicationStatusView {
   stage: ApplicationStage;
   submittedAt: DateTimeString;
   interviewAt?: DateTimeString;
+  enrollmentDate?: DateString;
   timeline: { stage: ApplicationStage; at: DateTimeString }[];
 }
 
@@ -682,7 +689,8 @@ export interface PayHereCheckout {
 // ---------- Communication ----------
 
 export type MessageChannel = "sms" | "email";
-export type AudienceType = "all_parents" | "grade" | "class" | "all_staff" | "defaulters";
+/** "applicant" is automatic: one family, about their application. */
+export type AudienceType = "all_parents" | "grade" | "class" | "all_staff" | "defaulters" | "applicant";
 
 export interface MessageLog {
   id: ID;

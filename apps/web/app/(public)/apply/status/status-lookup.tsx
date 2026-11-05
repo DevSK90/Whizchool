@@ -24,11 +24,11 @@ export function StatusLookup() {
   const [result, setResult] = useState<ApplicationStatusView | null>(null);
   const schema = z.object({
     refNo: z.string().trim().min(4, t("refPlaceholder")),
-    email: z.email(),
+    contact: z.string().trim().min(1, t("contactRequired")),
   });
   const form = useForm<z.infer<typeof schema>>({
     resolver: zodResolver(schema),
-    defaultValues: { refNo: params.get("ref") ?? "", email: "" },
+    defaultValues: { refNo: params.get("ref") ?? "", contact: "" },
   });
   const { errors, isSubmitting } = form.formState;
 
@@ -53,10 +53,10 @@ export function StatusLookup() {
                   <Input id="refNo" placeholder={t("refPlaceholder")} className="uppercase" aria-invalid={!!errors.refNo} {...form.register("refNo")} />
                   <FieldError>{errors.refNo?.message}</FieldError>
                 </Field>
-                <Field data-invalid={!!errors.email}>
-                  <FieldLabel htmlFor="email">{t("email")}</FieldLabel>
-                  <Input id="email" type="email" autoComplete="email" aria-invalid={!!errors.email} {...form.register("email")} />
-                  <FieldError>{errors.email?.message}</FieldError>
+                <Field data-invalid={!!errors.contact}>
+                  <FieldLabel htmlFor="contact">{t("contact")}</FieldLabel>
+                  <Input id="contact" aria-invalid={!!errors.contact} {...form.register("contact")} />
+                  <FieldError>{errors.contact?.message}</FieldError>
                 </Field>
               </div>
               {errors.root && (
@@ -97,6 +97,12 @@ export function StatusLookup() {
                 <div className="sm:col-span-2">
                   <dt className="text-muted-foreground">{t("interview")}</dt>
                   <dd className="font-medium">{formatDateTime(result.interviewAt)}</dd>
+                </div>
+              )}
+              {result.enrollmentDate && result.stage === "accepted" && (
+                <div className="sm:col-span-2">
+                  <dt className="text-muted-foreground">{t("enrollmentDate")}</dt>
+                  <dd className="font-medium">{formatDate(result.enrollmentDate)}</dd>
                 </div>
               )}
             </dl>

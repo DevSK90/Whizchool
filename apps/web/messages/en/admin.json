@@ -17,7 +17,8 @@
         "grade": "Parents of a grade",
         "class": "Parents of a class",
         "all_staff": "All staff",
-        "defaulters": "Parents with overdue fees"
+        "defaulters": "Parents with overdue fees",
+        "applicant": "An applicant's parent"
       },
       "pickGrades": "Grades",
       "pickClasses": "Classes",

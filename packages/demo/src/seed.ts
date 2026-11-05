@@ -779,6 +779,8 @@ export function createSeed(size: SeedSize = "standard"): DB {
     }
     db.applications.insert({
       id: nextId(db, "app"), refNo: `APP-2026-${String(301 + i).padStart(4, "0")}`, stage, submittedAt, interviewAt,
+      // One offer ready to enrol, the next waiting for its day. Fixed dates, so the random numbers don't shift.
+      enrollmentDate: stage === "accepted" ? (i % 2 ? SEED_DATE : "2027-01-05") : undefined,
       applyingGradeId: `grade_${gradeNo}`,
       student: {
         firstName: first, lastName: surname, gender, dob: iso(addDays(parseISO(`${2026 - gradeNo - 6}-01-01`), rng.int(0, 364))),

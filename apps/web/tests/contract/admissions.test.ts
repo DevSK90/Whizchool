@@ -1,7 +1,12 @@
 import { beforeAll, describe, expect, it } from "vitest";
-import { call, expectStatus, FILES, get, login, logout, resetData, upload, type Json } from "./helpers";
+import { call, expectStatus, FILES, get, login, logout, resetData, setToday, upload, type Json } from "./helpers";
 
-beforeAll(() => resetData());
+const TODAY = "2026-10-23";
+
+beforeAll(async () => {
+  await resetData();
+  await setToday(TODAY);
+});
 
 const application = (fileId?: string) => ({
   applyingGradeId: "grade_6",
@@ -28,9 +33,9 @@ describe("admissions: apply → interview → accept → enroll → parent invit
     refNo = first.refNo;
     expect(refNo).toMatch(/^APP-\d{4}-\d{4}$/);
 
-    const status = await get("/applications/status", { refNo, email: "test.parent@example.com" });
+    const status = await get("/applications/status", { refNo, contact: "test.parent@example.com" });
     expect(status.stage).toBe("new");
-    await expectStatus(404, get("/applications/status", { refNo, email: "someone.else@example.com" }));
+    await expectStatus(404, get("/applications/status", { refNo, contact: "someone.else@example.com" }));
   });
 
   it("validates the application with field errors", async () => {
@@ -42,7 +47,7 @@ describe("admissions: apply → interview → accept → enroll → parent invit
     await login("admin");
     appId = (await get("/applications", { search: refNo })).items[0].id;
     await call("POST", `/applications/${appId}/transition`, { to: "interview", interviewAt: "2026-11-02T10:00:00+05:30" });
-    await call("POST", `/applications/${appId}/transition`, { to: "accepted" });
+    await call("POST", `/applications/${appId}/transition`, { to: "accepted", enrollmentDate: TODAY });
     const classes: Json[] = await get("/classes");
     enrolled = await call("POST", `/applications/${appId}/enroll`, { classId: classes.find((c) => c.name === "6-A").id, inviteParent: true });
     expect(enrolled.admissionNo).toBeTruthy();

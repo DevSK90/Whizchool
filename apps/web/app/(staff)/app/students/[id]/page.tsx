@@ -23,6 +23,7 @@ import { StudentAttendanceView } from "@/components/students/attendance-view";
 import { DocumentsPanel } from "@/components/students/documents-panel";
 import { StudentPhoto } from "@/components/students/student-photo";
 import { StudentResultsView } from "@/components/students/results-view";
+import { NextSteps } from "@/components/students/next-steps";
 import { InvoiceList } from "@/components/fees/invoice-list";
 import { RecordPaymentDialog } from "@/components/fees/record-payment-dialog";
 import { api, ApiError } from "@/lib/api/client";
@@ -78,6 +79,8 @@ export default function StudentProfilePage({ params }: PageProps<"/app/students/
           </>
         }
       />
+
+      <NextSteps student={s} onPayment={() => setTab("fees")} />
 
       <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <MiniStat label={t("attendanceRate")} value={`${s.attendanceRate.toFixed(1)}%`} />

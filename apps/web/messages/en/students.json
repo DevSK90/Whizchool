@@ -1,4 +1,14 @@
 {
+  "nextSteps": {
+    "title": "Next steps for this new student",
+    "description": "{count, plural, one {# thing} other {# things}} left to do.",
+    "payment": "Collect the enrolment fees",
+    "subjects": "Choose the student's subjects",
+    "photo": "Add a profile photo (click the photo at the top of this page)",
+    "medical": "Add blood group and allergies",
+    "open": "Open form",
+    "openFees": "Record payment"
+  },
   "title": "Students",
   "description": "Everyone enrolled this year, with their guardians and balances.",
   "add": "Add student",

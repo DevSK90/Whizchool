@@ -596,10 +596,13 @@ model Application {
   /// Snapshot of the submitted guardian details (ApplicationInput["guardian"]).
   guardian          Json
   studentName       String
-  guardianEmail     String
+  /// A parent at the office may not have one.
+  guardianEmail     String?
   guardianPhone     String
   submittedAt       DateTime         @default(now()) @db.Timestamptz(3)
   interviewAt       DateTime?        @db.Timestamptz(3)
+  /// Set on acceptance: the first day the student can be enrolled.
+  enrollmentDate    DateTime?        @db.Date
   enrolledStudentId String?          @unique
 
   applyingGrade   Grade                 @relation(fields: [applyingGradeId], references: [id])

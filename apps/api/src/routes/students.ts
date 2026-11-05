@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { ApiError } from "@whizchool/shared/api";
-import { sitsSubject } from "@whizchool/shared/curriculum";
+import { missingChoices, sitsSubject } from "@whizchool/shared/curriculum";
 import { normalizeLocalPhone } from "@whizchool/shared/phone";
 import type { Discount, Guardian, StudentAttendance, StudentDetail, StudentDocument } from "@whizchool/shared/types";
 import { audit } from "../audit";
@@ -123,7 +123,11 @@ export async function studentDetail(auth: AuthContext, id: string): Promise<Stud
     .filter((cs) => sitsSubject(cs.optionGroup, cs.subjectId, electives))
     .map((cs) => ({ id: cs.subjectId, name: cs.subject.name }));
 
+  const offered = s.class.subjects;
+  const hasChoices = offered.some((cs) => cs.optionGroup);
+
   return {
+    ...(hasChoices ? { subjectChoices: missingChoices(offered, electives, s.class.stream?.optionsRequired ?? 0) ? ("pending" as const) : ("done" as const) } : {}),
     ...omitNulls({
       id: s.id,
       admissionNo: s.admissionNo,

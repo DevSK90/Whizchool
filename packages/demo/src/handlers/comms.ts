@@ -105,7 +105,7 @@ export const commsRoutes: Route[] = [
       if (!recipients) fail(422, "validation", "No recipients match this audience.");
       const m = db.messages.insert({
         id: nextId(db, "msg"), channel, kind: type === "defaulters" ? "fee_reminder" : "manual",
-        audience: { type, ids, label: audienceLabel(db, type, ids) }, subject: subject?.trim() || undefined, body: body.trim(),
+        audience: { type, ids, label: audienceLabel(db, type, ids) ?? "" }, subject: subject?.trim() || undefined, body: body.trim(),
         recipients, delivered: 0, failed: 0, status: "queued", createdAt: isoNow(ctx), createdBy: ctx.session!.name,
       });
       audit(ctx, "message.send", "Message", `Sent ${channel.toUpperCase()} to ${m.audience.label} (${recipients})`, m.id);

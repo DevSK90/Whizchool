@@ -41,7 +41,7 @@ test("visitor applies, tracks status, and the admin enrolls the applicant", asyn
   await expect(page.getByText(/APP-\d{4}-\d{4}/).first()).toBeVisible();
 
   await page.getByRole("link", { name: "Track application status" }).click();
-  await page.fill("#email", "chandima.g@example.com");
+  await page.fill("#contact", "chandima.g@example.com");
   await page.getByRole("button", { name: "Check status" }).click();
   await expect(page.getByText("Senuri Gunawardena")).toBeVisible();
 
@@ -50,7 +50,10 @@ test("visitor applies, tracks status, and the admin enrolls the applicant", asyn
   await open(page, "/app/admissions?stage=new");
   await page.getByRole("link", { name: "Senuri Gunawardena" }).click();
   await page.getByRole("button", { name: "Accept" }).click();
-  await page.getByRole("alertdialog").getByRole("button", { name: "Accept" }).click();
+  const accept = page.getByRole("dialog");
+  await accept.locator("#enrollmentDate").click();
+  await page.locator("[data-slot=popover-content] [data-today] button").first().click();
+  await accept.getByRole("button", { name: "Accept" }).click();
   await page.getByRole("button", { name: "Enroll student" }).click();
   await page.getByRole("dialog").getByRole("combobox").click();
   await page.getByRole("option").first().click();

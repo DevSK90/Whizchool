@@ -163,10 +163,11 @@ export async function seedDemoSchool(db: Db, size: SeedSize = "standard") {
       student: a.student,
       guardian: a.guardian,
       studentName: `${a.student.firstName} ${a.student.lastName}`,
-      guardianEmail: a.guardian.email.toLowerCase(),
+      guardianEmail: a.guardian.email?.toLowerCase() ?? null,
       guardianPhone: a.guardian.phone,
       submittedAt: at(a.submittedAt),
       interviewAt: opt(a.interviewAt, at),
+      enrollmentDate: a.enrollmentDate ? new Date(`${a.enrollmentDate}T00:00:00Z`) : null,
       enrolledStudentId: a.enrolledStudentId ?? null,
     })),
   );

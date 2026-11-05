@@ -18,7 +18,7 @@ test("admin adds a staff member with no login, finds them, and marks them as lef
   await page.getByRole("option", { name: "Non-academic" }).click();
   await page.locator("#designation").fill("Canteen Manager");
   await page.locator("#joinedOn").click();
-  await page.getByRole("dialog").getByRole("gridcell").getByRole("button").filter({ hasText: /^15$/ }).first().click();
+  await page.locator("[data-slot=popover-content] [data-today] button").first().click();
   await page.locator("#nic").fill("851234567V");
   await page.getByRole("button", { name: "Add staff member" }).click();
 

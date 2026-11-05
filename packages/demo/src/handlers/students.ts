@@ -8,7 +8,7 @@ import type {
   StudentDetail,
   StudentResults,
 } from "@whizchool/shared/types";
-import { keepChoices, tooManyChoices } from "@whizchool/shared/curriculum";
+import { keepChoices, missingChoices, tooManyChoices } from "@whizchool/shared/curriculum";
 import { gradeFor } from "@whizchool/shared/grading";
 import { sameGuardianName } from "@whizchool/shared/people";
 import { normalizeLocalPhone } from "@whizchool/shared/phone";
@@ -102,6 +102,14 @@ function validateStudent(db: DB, input: Partial<NewStudentInput>) {
   if (!db.classes.get(input.classId)) fields.classId = "Choose a class";
   if (!input.address?.trim()) fields.address = "Required";
   if (Object.keys(fields).length) fail(422, "validation", "Please fix the highlighted fields.", fields);
+}
+
+/** Absent when the student's class has nothing to choose. */
+function choicesState(db: DB, s: Student) {
+  const offered = db.classSubjects.rows.filter((cs) => cs.classId === s.classId);
+  if (!offered.some((cs) => cs.optionGroup)) return undefined;
+  const stream = db.streams.get(db.classes.get(s.classId)?.streamId ?? "");
+  return missingChoices(offered, new Set(s.electiveSubjectIds), stream?.optionsRequired ?? 0) ? ("pending" as const) : ("done" as const);
 }
 
 export function inviteUser(ctx: Ctx, user: { name: string; email: string; phone?: string; kind: "staff" | "parent"; roleIds: string[]; guardianId?: string; staffId?: string }) {
@@ -295,6 +303,7 @@ export const studentRoutes: Route[] = [
           .map((e) => ({ yearName: db.years.get(e.yearId)?.name ?? e.yearId.slice(5), className: className(db, e.classId) }))
           .sort((a, b) => b.yearName.localeCompare(a.yearName)),
         photoUrl: fileRef(db, s.photoFileId)?.url,
+        subjectChoices: choicesState(db, s),
         documents: db.studentDocuments.rows
           .filter((d) => d.studentId === s.id)
           .sort((a, b) => b.uploadedAt.localeCompare(a.uploadedAt))

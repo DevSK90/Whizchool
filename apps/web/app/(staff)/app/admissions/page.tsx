@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { ExternalLink, UserPlus } from "lucide-react";
+import { ExternalLink, Plus, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DataTable, type Column } from "@/components/shared/data-table";
@@ -14,6 +14,7 @@ import { EmptyState } from "@/components/shared/states";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { useApplicationCounts, useApplications, useGrades } from "@/lib/api/hooks";
 import type { ApplicationListItem, ApplicationStage } from "@whizchool/shared/types";
+import { useCan } from "@/lib/auth";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { useUrlState } from "@/hooks/use-url-state";
 
@@ -22,6 +23,7 @@ const STAGES: (ApplicationStage | "all")[] = ["all", "new", "interview", "accept
 export default function AdmissionsPage() {
   const t = useTranslations("admissions");
   const ts = useTranslations("status.application");
+  const can = useCan();
   const router = useRouter();
   const url = useUrlState<"stage" | "search" | "gradeId" | "sort">({ stage: "all", sort: "-submittedAt" });
   const params = { stage: url.get("stage"), search: url.get("search"), gradeId: url.get("gradeId"), sort: url.get("sort"), page: url.page, pageSize: 20 };
@@ -55,6 +57,7 @@ export default function AdmissionsPage() {
     },
     { key: "submitted", header: t("columns.submitted"), sortKey: "submittedAt", hideBelow: "sm", cell: (a) => formatDate(a.submittedAt) },
     { key: "interview", header: t("columns.interview"), sortKey: "interviewAt", hideBelow: "lg", cell: (a) => (a.interviewAt && a.stage === "interview" ? formatDateTime(a.interviewAt) : "—") },
+    { key: "enrollment", header: t("columns.enrollment"), hideBelow: "lg", cell: (a) => (a.stage === "accepted" && a.enrollmentDate ? formatDate(a.enrollmentDate) : <span className="text-muted-foreground">—</span>) },
     { key: "stage", header: t("columns.stage"), cell: (a) => <StatusBadge kind="application" status={a.stage} /> },
   ];
 
@@ -64,11 +67,20 @@ export default function AdmissionsPage() {
         title={t("title")}
         description={t("description")}
         actions={
-          <Button variant="outline" asChild>
-            <Link href="/apply" target="_blank">
-              <ExternalLink /> {t("publicForm")}
-            </Link>
-          </Button>
+          <>
+            <Button variant="outline" asChild>
+              <Link href="/apply" target="_blank">
+                <ExternalLink /> {t("publicForm")}
+              </Link>
+            </Button>
+            {can("admissions.create") && (
+              <Button asChild>
+                <Link href="/app/admissions/new">
+                  <Plus /> {t("newApplication")}
+                </Link>
+              </Button>
+            )}
+          </>
         }
       />
       <Tabs value={url.get("stage")} onValueChange={(v) => url.set({ stage: v })} className="mb-4">

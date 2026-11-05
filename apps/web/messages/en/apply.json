@@ -67,8 +67,8 @@
     "next": "What happens next",
     "steps": {
       "one": "The office reviews your application within a week.",
-      "two": "You receive an interview date by email and SMS.",
-      "three": "After acceptance, you get a parent-portal invitation."
+      "two": "You receive your interview date by email and SMS.",
+      "three": "If offered a place, you're told your enrolment date, then get a parent-portal invitation when your child is enrolled."
     }
   },
   "validation": {
@@ -80,23 +80,25 @@
   "status": {
     "metaTitle": "Application status",
     "title": "Check application status",
-    "subtitle": "Enter the reference number from your confirmation email and the email you applied with.",
+    "subtitle": "Enter your reference number and the email or mobile number on the application.",
     "refNo": "Reference number",
     "refPlaceholder": "APP-2026-0301",
-    "email": "Email",
+    "contact": "Email or phone number",
+    "contactRequired": "Enter the email or phone number on the application",
     "submit": "Check status",
-    "notFound": "We couldn't find an application with those details. Check the reference number and email.",
+    "notFound": "We couldn't find an application with those details. Check the reference number, and the email or phone number.",
     "applicant": "Applicant",
     "submitted": "Submitted",
     "interview": "Interview scheduled",
+    "enrollmentDate": "Enrolment date",
     "currentStage": "Current stage",
     "timeline": "Progress",
     "next": {
       "new": "The school office is reviewing your application. You'll be contacted within a week.",
       "interview": "Please attend the interview and placement test with your child at the time shown.",
-      "accepted": "Congratulations! The office will contact you to complete enrollment and fee payment.",
+      "accepted": "Congratulations! Please come to the school with your child on the enrolment date, ready to pay the enrolment fees.",
       "rejected": "Unfortunately we cannot offer a place this time. Please contact the office for details.",
-      "enrolled": "Your child is enrolled. Check your email for the parent portal invitation.",
+      "enrolled": "Your child is enrolled. If you gave an email address, check it for the parent portal invitation.",
       "withdrawn": "This application was withdrawn."
     }
   },
@@ -125,7 +127,7 @@
     "review": "Review your application"
   },
   "help": {
-    "phone": "A mobile number — we send interview reminders by SMS.",
+    "phone": "A mobile number: we send updates about the application by SMS.",
     "email": "Your reference number and updates are emailed here.",
     "medical": "Anything the school should know to keep your child safe.",
     "nic": "New 12-digit or old 9-digit + V format."
