@@ -1,13 +1,21 @@
 import { ApiError } from "@whizchool/shared/api";
 import type { PortalChild, StudentResults } from "@whizchool/shared/types";
 import { canSeeStudent } from "../auth/scope";
-import { fromIsoDate, schoolToday } from "../dates";
+import { fromIsoDate, schoolToday, toIsoDate } from "../dates";
 import { prisma } from "../db";
 import { defineRoute } from "../http/route";
 import { currentYearId } from "../school";
 import { classResults, examInclude, toExam, type SubjectResult } from "../services/results";
 import { toFileRef } from "../storage";
 import { balances, fullName } from "../students";
+
+/** When the report card a student got for an exam was released. */
+async function reportReleasedAt(studentId: string, examId: string) {
+  const card = await prisma.reportCard.findFirst({ where: { studentId, examId, classId: { not: null } }, select: { classId: true } });
+  if (!card?.classId) return undefined;
+  const report = await prisma.classReport.findUnique({ where: { examId_classId: { examId, classId: card.classId } }, select: { releasedAt: true } });
+  return report?.releasedAt ?? undefined;
+}
 
 /** A student's term-test results this year. Parents see released results only. */
 async function studentResults(student: { id: string; classId: string }, releasedOnly: boolean): Promise<StudentResults> {
@@ -59,28 +67,50 @@ export const resultRoutes = [
       const ids = auth.session.studentIds;
       const year = await prisma.academicYear.findUniqueOrThrow({ where: { id: await currentYearId() } });
       const today = fromIsoDate(schoolToday());
-      const [students, attendance, owed, overdue] = await Promise.all([
-        prisma.student.findMany({ where: { id: { in: ids } }, include: { class: { select: { name: true } }, photo: true } }),
+      const [students, attendance, owed, open, marked] = await Promise.all([
+        prisma.student.findMany({ where: { id: { in: ids } }, include: { class: { select: { name: true, classTeacher: { select: { name: true } } } }, photo: true } }),
         prisma.attendanceRecord.groupBy({ by: ["studentId", "status"], where: { studentId: { in: ids }, date: { gte: year.startDate, lte: today } }, _count: { _all: true } }),
         balances(prisma, ids),
-        prisma.invoice.findMany({ where: { studentId: { in: ids }, status: { in: ["unpaid", "partial"] }, dueDate: { lt: today } }, select: { studentId: true, total: true, paid: true } }),
+        prisma.invoice.findMany({ where: { studentId: { in: ids }, status: { in: ["unpaid", "partial"] } }, select: { studentId: true, total: true, paid: true, dueDate: true } }),
+        prisma.attendanceRecord.findMany({ where: { studentId: { in: ids }, date: today }, select: { studentId: true, status: true } }),
       ]);
+      const owing = (i: { total: unknown; paid: unknown }) => Number(i.total) - Number(i.paid);
       const out: PortalChild[] = [];
       for (const s of students.sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id))) {
         const days = attendance.filter((a) => a.studentId === s.id);
         const total = days.reduce((n, a) => n + a._count._all, 0);
         const attended = days.filter((a) => a.status === "present" || a.status === "late").reduce((n, a) => n + a._count._all, 0);
         const latest = (await studentResults(s, true)).exams.filter((e) => e.released && e.average !== undefined).pop();
+        const releasedAt = latest ? await reportReleasedAt(s.id, latest.exam.id) : undefined;
+        const mine = open.filter((i) => i.studentId === s.id);
+        const upcoming = mine.filter((i) => i.dueDate >= today);
+        const nextDate = upcoming.map((i) => i.dueDate.getTime()).sort((a, b) => a - b)[0];
+        const todayMark = marked.find((m) => m.studentId === s.id);
         out.push({
           id: s.id,
           fullName: fullName(s),
           ...(s.photo ? { photoUrl: toFileRef(s.photo).url } : {}),
           admissionNo: s.admissionNo,
           className: s.class.name,
+          ...(s.class.classTeacher ? { classTeacherName: s.class.classTeacher.name } : {}),
           attendanceRate: total ? Math.round((attended / total) * 1000) / 10 : 100,
-          ...(latest ? { latestAverage: latest.average, latestExamName: latest.exam.name, latestRank: latest.rank, classSize: latest.classSize } : {}),
+          absentDays: days.filter((a) => a.status === "absent").reduce((n, a) => n + a._count._all, 0),
+          ...(todayMark ? { todayAttendance: todayMark.status } : {}),
+          ...(latest
+            ? {
+                latestAverage: latest.average,
+                latestExamId: latest.exam.id,
+                latestExamName: latest.exam.name,
+                latestRank: latest.rank,
+                classSize: latest.classSize,
+                ...(releasedAt ? { latestReleasedAt: releasedAt.toISOString() } : {}),
+              }
+            : {}),
           balance: owed.get(s.id) ?? 0,
-          overdue: overdue.filter((i) => i.studentId === s.id).reduce((n, i) => n + Number(i.total) - Number(i.paid), 0),
+          overdue: mine.filter((i) => i.dueDate < today).reduce((n, i) => n + owing(i), 0),
+          ...(nextDate !== undefined
+            ? { nextDue: { amount: upcoming.filter((i) => i.dueDate.getTime() === nextDate).reduce((n, i) => n + owing(i), 0), dueDate: toIsoDate(new Date(nextDate)) } }
+            : {}),
         });
       }
       return out;

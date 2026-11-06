@@ -29,7 +29,7 @@ export function PortalShellSkeleton() {
   return (
     <div className="min-h-svh">
       <div className="h-14 border-b" />
-      <div className="mx-auto max-w-3xl space-y-4 p-4">
+      <div className="mx-auto max-w-7xl space-y-4 p-4 md:p-6">
         <Skeleton className="h-8 w-48" />
         <CardsSkeleton count={2} />
       </div>
@@ -97,7 +97,7 @@ export function PortalShell({ children }: { children: ReactNode }) {
     <AreaGate area="parent" fallback={<PortalShellSkeleton />}>
       <div className="min-h-svh bg-background">
         <header className="no-print sticky top-0 z-20 border-b bg-background/90 backdrop-blur">
-          <div className="mx-auto flex h-14 max-w-5xl items-center gap-3 px-4">
+          <div className="mx-auto flex h-14 max-w-7xl items-center gap-3 px-4 md:px-6">
             <Link href="/portal" className="min-w-0">
               <Logo subtitle={school?.name} />
             </Link>
@@ -108,7 +108,7 @@ export function PortalShell({ children }: { children: ReactNode }) {
             <UserMenu profileHref="/portal/profile" />
           </div>
         </header>
-        <main id="main" className="mx-auto w-full max-w-5xl px-4 pt-5 pb-24 md:pb-10">
+        <main id="main" className="mx-auto w-full max-w-7xl px-4 pt-6 pb-24 md:px-6 md:pb-10">
           {children}
         </main>
         <PortalTabBar />

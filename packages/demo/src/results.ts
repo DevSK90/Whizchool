@@ -30,6 +30,15 @@ export function reportStatus(db: DB, examId: string, classId: string): ReportCar
   return db.reportStatus.get(`${examId}|${classId}`) ?? (marksComplete(db, examId, classId) ? "draft" : "pending_marks");
 }
 
+/** When a class's report cards were released: seeded ones 17 days after the test ended, as the API's seed has it. */
+export function reportReleasedAt(db: DB, examId: string, classId: string): string | undefined {
+  if (db.reportStatus.get(`${examId}|${classId}`) !== "released") return undefined;
+  const at = db.reportReleasedAt.get(`${examId}|${classId}`);
+  if (at) return at;
+  const exam = db.exams.get(examId);
+  return exam ? new Date(Date.parse(`${exam.endDate}T00:00:00Z`) + 17 * 86_400_000).toISOString() : undefined;
+}
+
 export function classResults(db: DB, examId: string, classId: string) {
   const roster = classRoster(db, classId);
   const rows = roster.map((s) => {

@@ -127,6 +127,8 @@ export interface DB {
   submittedSheets: Set<string>;
   /** key: `${examId}|${classId}` — approval workflow state beyond computed "pending/draft" */
   reportStatus: Map<string, Extract<ReportCardStatus, "approved" | "released">>;
+  /** key: `${examId}|${classId}`: when report cards released in this session were released (seeded ones: see reportReleasedAt). */
+  reportReleasedAt: Map<string, string>;
   /** key: `${examId}|${studentId}` */
   remarks: Map<string, { classTeacher?: string; principal?: string }>;
   feeTypes: Table<FeeType>;

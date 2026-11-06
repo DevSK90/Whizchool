@@ -781,13 +781,23 @@ export interface PortalChild {
   photoUrl?: string;
   admissionNo: string;
   className: string;
+  classTeacherName?: string;
   attendanceRate: number;
+  /** Days marked absent this school year. */
+  absentDays: number;
+  /** Today's mark, once the register is taken. */
+  todayAttendance?: AttendanceStatus;
   latestAverage?: number;
+  latestExamId?: ID;
   latestExamName?: string;
   latestRank?: number;
   classSize?: number;
+  /** When the latest result's report card was released. */
+  latestReleasedAt?: DateTimeString;
   balance: number;
   overdue: number;
+  /** The earliest unpaid invoice that isn't overdue yet. */
+  nextDue?: { amount: number; dueDate: DateString };
 }
 
 // ---------- Timetables ----------

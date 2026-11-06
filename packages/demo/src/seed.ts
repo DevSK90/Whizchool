@@ -308,6 +308,7 @@ export function createSeed(size: SeedSize = "standard"): DB {
     marks: new Map(),
     submittedSheets: new Set(),
     reportStatus: new Map(),
+    reportReleasedAt: new Map(),
     remarks: new Map(),
     feeTypes: new Table<FeeType>([
       { id: "fee_tuition", name: "Tuition fee", recurrence: "monthly", active: true, description: "Billed on the 1st of every month, due on the 10th." },

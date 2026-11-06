@@ -23,7 +23,7 @@ export default function PortalNoticesPage() {
       ) : (
         <div className="space-y-4">
           {data.map((n) => (
-            <Card key={n.id}>
+            <Card key={n.id} id={`notice-${n.id}`} className="scroll-mt-20 target:ring-2 target:ring-primary">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   {n.pinned && <Pin className="size-4 text-primary" />}

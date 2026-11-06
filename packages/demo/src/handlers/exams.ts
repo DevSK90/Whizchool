@@ -392,6 +392,7 @@ export const examRoutes: Route[] = [
       const { examId, classId } = ctx.body ?? {};
       if (reportStatus(db, examId, classId) !== "approved") fail(409, "invalid_transition", "Approve the report cards before releasing them.");
       db.reportStatus.set(`${examId}|${classId}`, "released");
+      db.reportReleasedAt.set(`${examId}|${classId}`, isoNow(ctx));
       refreshExamStatus(db, examId);
       const exam = getExam(db, examId);
       const parents = classRoster(db, classId).length;

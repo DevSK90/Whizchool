@@ -35,7 +35,7 @@ Repo today: `frontend/` (Next.js 16.4.3 scaffold, own `.git`) and `backend/` (Ex
 ## 4. Pages & routing (Next.js App Router)
 - **Public:** `/`, `/apply`, `/apply/status`, `/login`, `/forgot-password`, `/reset-password`, `/invite/[token]`. Only `/` and `/apply` are SEO-indexed; everything else is `noindex`.
 - **Staff (`/app/...`, desktop-first):** dashboard, admissions, students `[id]`, staff (list, `[id]`, add and edit), classes, timetables (overview, `[classId]` builder, my timetable), attendance, exams/marks, report cards, fees (invoices, payments, structures, defaulters), messaging, settings (school, academic years, terms, grades/sections/streams, subjects, grade bands, fee types), users & roles (permission matrix), import, audit log.
-- **Parent portal (`/portal/...`, mobile-first):** home, child `[id]` (timetable, attendance, results, report-card PDFs, fees/pay), notices, profile.
+- **Parent portal (`/portal/...`, mobile-first):** home (what needs attention: overdue fees, a new report card, absent today; per child: class teacher, today's attendance and classes, attendance, latest result with its report card, fees and next due date; coming up: the term and the next term test; latest notices), child `[id]` (timetable, attendance, results, report-card PDFs, fees/pay), notices, profile.
 - Route protection uses an auth check in Next middleware (redirect only). **Every permission is enforced in Express.**
 
 ## 5. UI

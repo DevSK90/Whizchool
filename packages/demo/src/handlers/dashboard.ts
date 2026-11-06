@@ -14,7 +14,7 @@ import {
   studentBalance,
   todayISO,
 } from "../helpers";
-import { classRoster, reportStatus } from "../results";
+import { classRoster, reportReleasedAt, reportStatus } from "../results";
 import { feesSummary } from "./fees";
 import { studentAttendance, studentResults } from "./students";
 
@@ -109,19 +109,30 @@ export const dashboardRoutes: Route[] = [
           const st = db.students.get(id)!;
           const results = studentResults(db, id, true).exams.filter((e) => e.released && e.average !== undefined);
           const latest = results[results.length - 1];
+          const attendance = studentAttendance(db, id, today);
+          const open = db.invoices.rows.filter((i) => i.studentId === id && i.balance > 0 && i.status !== "void");
+          const upcoming = open.filter((i) => i.dueDate >= today);
+          const nextDate = upcoming.map((i) => i.dueDate).sort()[0];
+          const teacher = db.staff.get(db.classes.get(st.classId)?.classTeacherId ?? "");
           return {
             id,
             fullName: fullName(st),
             photoUrl: fileRef(db, st.photoFileId)?.url,
             admissionNo: st.admissionNo,
             className: className(db, st.classId),
-            attendanceRate: studentAttendance(db, id, today).rate,
+            classTeacherName: teacher?.name,
+            attendanceRate: attendance.rate,
+            absentDays: attendance.absent,
+            todayAttendance: attendance.days.find((d) => d.date === today)?.status,
             latestAverage: latest?.average,
+            latestExamId: latest?.exam.id,
             latestExamName: latest?.exam.name,
             latestRank: latest?.rank,
             classSize: latest?.classSize,
+            latestReleasedAt: latest ? reportReleasedAt(db, latest.exam.id, st.classId) : undefined,
             balance: studentBalance(db, id),
-            overdue: db.invoices.rows.filter((i) => i.studentId === id && i.balance > 0 && i.status !== "void" && i.dueDate < today).reduce((a, i) => a + i.balance, 0),
+            overdue: open.filter((i) => i.dueDate < today).reduce((a, i) => a + i.balance, 0),
+            nextDue: nextDate ? { amount: upcoming.filter((i) => i.dueDate === nextDate).reduce((a, i) => a + i.balance, 0), dueDate: nextDate } : undefined,
           };
         });
     },
