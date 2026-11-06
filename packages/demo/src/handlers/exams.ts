@@ -272,13 +272,20 @@ export const examRoutes: Route[] = [
       const cls = db.classes.get(classId) ?? fail(404, "not_found", "Class not found.");
       const res = classResults(db, examId, classId);
       const status = reportStatus(db, examId, classId);
+      const offered = db.classSubjects.rows
+        .filter((cs) => cs.classId === classId)
+        .map((cs) => ({ subjectId: cs.subjectId, name: db.subjects.get(cs.subjectId)!.name, ...(cs.optionGroup ? { optionGroup: cs.optionGroup } : {}), average: res.subjectAverages[cs.subjectId] ?? 0 }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+      const optionsRequired = db.streams.get(cls.streamId ?? "")?.optionsRequired;
       return {
         exam, classId, className: cls.name, status, marksComplete: marksComplete(db, examId, classId),
+        subjects: offered, ...(optionsRequired ? { optionsRequired } : {}),
         rows: res.rows
           .map((r) => ({
             examId, studentId: r.student.id, admissionNo: r.student.admissionNo, fullName: fullName(r.student),
             total: r.total, average: r.average, rank: r.rank, classSize: res.classSize,
-            grades: gradeCounts(db, r.subjects.map((x) => x.mark)), status,
+            grades: gradeCounts(db, r.subjects.map((x) => x.mark)),
+            marks: r.subjects.map((x) => ({ subjectId: x.subjectId, mark: x.mark, grade: gradeFor(x.mark, db.gradeBands) })), status,
             hasRemark: !!db.remarks.get(`${examId}|${r.student.id}`)?.classTeacher,
           }))
           .sort((a, b) => a.rank - b.rank),

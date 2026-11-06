@@ -176,7 +176,26 @@
       "marksPending": "Some mark sheets are not submitted yet. Report cards can be approved once all marks are in.",
       "view": "View",
       "remarkPlaceholder": "e.g. Excellent effort this term. Keep it up!",
-      "printAll": "Print all report cards"
+      "printAll": "Print all report cards",
+      "tabMarks": "Mark schedule",
+      "tabCards": "Report cards & remarks"
+    },
+    "schedule": {
+      "student": "Student",
+      "rank": "Rank",
+      "admissionNo": "Admission no.",
+      "subject": "subject",
+      "mark": "mark",
+      "total": "Total",
+      "average": "Average",
+      "classAverage": "Class average",
+      "nth": "{group} {n}",
+      "notChosen": "No subject chosen yet",
+      "notChosenShort": "—",
+      "export": "Export to Excel (CSV)",
+      "print": "Print mark schedule",
+      "printTitle": "Mark schedule · {className} · {exam}",
+      "legend": "Students are ranked by average. AB means absent; — means no mark yet, or no subject chosen in that group. Click a name to open the report card."
     },
     "card": {
       "title": "Report card",

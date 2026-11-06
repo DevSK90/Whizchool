@@ -133,6 +133,7 @@
     "reversed": "This payment was reversed."
   },
   "defaulters": {
+    "selectAll": "Select all {count} students, on every page",
     "title": "Defaulters",
     "description": "Active students with fees overdue by more than 30 days.",
     "remind": "Send SMS reminder",

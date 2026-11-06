@@ -47,6 +47,7 @@ export const classRoster = (db: Client, classId: string) =>
 const classInclude = {
   grade: { select: { name: true, number: true, level: true } },
   classTeacher: { select: { name: true } },
+  stream: { select: { optionsRequired: true } },
   subjects: { select: { subjectId: true, optionGroup: true, subject: { select: { name: true } } }, orderBy: { subject: { name: "asc" } } },
 } satisfies Prisma.ClassSectionInclude;
 

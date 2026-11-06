@@ -7,7 +7,7 @@ import { CheckCircle2, MessageSquareWarning } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
-import { DataTable } from "@/components/shared/data-table";
+import { DataTable, pageOfRows } from "@/components/shared/data-table";
 import { FilterBar, FilterSelect } from "@/components/shared/filters";
 import { PageHeader } from "@/components/shared/page-header";
 import { SearchInput } from "@/components/shared/search-input";
@@ -21,7 +21,6 @@ import { useUrlState } from "@/hooks/use-url-state";
 export default function DefaultersPage() {
   const t = useTranslations("fees.defaulters");
   const tst = useTranslations("students");
-  const tc = useTranslations("common");
   const can = useCan();
   const url = useUrlState<"search" | "classId">();
   const classes = useClasses();
@@ -29,6 +28,7 @@ export default function DefaultersPage() {
   const [selected, setSelected] = useState<string[]>([]);
   const rows = list.data ?? [];
   const target = selected.length ? selected : rows.map((r) => r.studentId);
+  const paged = pageOfRows(list.data, url.page, (page) => url.set({ page }));
   const remind = useApiMutation(() => api.post<{ sent: number }>("/fees/defaulters/remind", { studentIds: target }), {
     invalidate: [["defaulters"], ["messages"]],
     success: (r) => t("sent", { count: r.sent }),
@@ -74,7 +74,8 @@ export default function DefaultersPage() {
         )}
       </FilterBar>
       <DataTable
-        rows={list.data}
+        rows={paged.rows}
+        pagination={paged.pagination}
         loading={list.isPending}
         error={list.error}
         onRetry={list.refetch}
@@ -85,7 +86,7 @@ export default function DefaultersPage() {
             key: "sel",
             header: (
               <Checkbox
-                aria-label={tc("a11y.selectAll")}
+                aria-label={t("selectAll", { count: rows.length })}
                 checked={rows.length > 0 && selected.length === rows.length}
                 onCheckedChange={(c) => setSelected(c ? rows.map((r) => r.studentId) : [])}
               />

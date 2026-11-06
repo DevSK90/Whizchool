@@ -65,9 +65,9 @@ export function ReportCardView({ card, showPrintButton = true }: { card: ReportC
             {card.subjects.map((s) => (
               <tr key={s.subjectId} className="border-b border-zinc-200">
                 <td className="px-3 py-2">{s.name}</td>
-                <td className="px-3 py-2 text-right tabular">{s.mark ?? "—"}</td>
+                <td className="px-3 py-2 text-right">{s.mark ?? "—"}</td>
                 <td className={cn("px-3 py-2 text-center font-semibold", s.grade === "W" && "text-red-700")}>{s.grade}</td>
-                <td className="px-3 py-2 text-right text-zinc-500 tabular">{s.classAverage.toFixed(1)}</td>
+                <td className="px-3 py-2 text-right text-zinc-500">{s.classAverage.toFixed(1)}</td>
               </tr>
             ))}
           </tbody>

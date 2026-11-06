@@ -44,6 +44,27 @@ async function refreshExamStatus(examId: string) {
   if (all && exam.status !== "released") await prisma.exam.update({ where: { id: examId }, data: { status: "released" } });
 }
 
+/**
+ * The mark schedule's subjects: what the class offers, with class averages from the results shown. A subject
+ * the class stopped offering after its results were frozen still gets its column.
+ */
+function scheduleSubjects(
+  cls: { subjects: { subjectId: string; optionGroup: string | null; subject: { name: string } }[]; stream?: { optionsRequired: number } | null },
+  rows: { subjects: { subjectId: string; name: string; classAverage: number }[] }[],
+) {
+  const averages = new Map(rows.flatMap((r) => r.subjects.map((s) => [s.subjectId, s.classAverage] as const)));
+  const subjects = cls.subjects.map((cs) => ({ subjectId: cs.subjectId, name: cs.subject.name, ...(cs.optionGroup ? { optionGroup: cs.optionGroup } : {}), average: averages.get(cs.subjectId) ?? 0 }));
+  const offered = new Set(subjects.map((s) => s.subjectId));
+  for (const r of rows) {
+    for (const s of r.subjects) {
+      if (offered.has(s.subjectId)) continue;
+      offered.add(s.subjectId);
+      subjects.push({ subjectId: s.subjectId, name: s.name, average: s.classAverage });
+    }
+  }
+  return { subjects, ...(cls.stream?.optionsRequired ? { optionsRequired: cls.stream.optionsRequired } : {}) };
+}
+
 export const reportCardRoutes = [
   defineRoute({
     method: "GET",
@@ -80,7 +101,7 @@ export const reportCardRoutes = [
       const exam = await loadExam(query.examId);
       const cls = await loadClass(query.classId);
       assertClassAccess(auth, cls.id, "reportCards.view");
-      const { status, rows, classSize } = await classReportRows(prisma, exam.id, cls.id);
+      const { status, rows, classSize, cls: offered } = await classReportRows(prisma, exam.id, cls.id);
       const sheets = (await reportStatuses(prisma, exam.id, [cls.id])).get(cls.id)!;
       return {
         exam: toExam(exam),
@@ -88,6 +109,7 @@ export const reportCardRoutes = [
         className: cls.name,
         status,
         marksComplete: sheets.sheetsSubmitted >= sheets.sheetsTotal,
+        ...scheduleSubjects(offered, rows),
         rows: rows.map((r) => {
           const grades: Record<string, number> = {};
           for (const s of r.subjects) if (s.grade !== "—") grades[s.grade] = (grades[s.grade] ?? 0) + 1;
@@ -101,6 +123,7 @@ export const reportCardRoutes = [
             rank: r.rank,
             classSize,
             grades,
+            marks: r.subjects.map((s) => ({ subjectId: s.subjectId, mark: s.mark, grade: s.grade })),
             status,
             hasRemark: !!r.classTeacherRemark,
           };

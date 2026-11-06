@@ -19,6 +19,7 @@ const API_CONTRACTS = [
   "tests/contract/dashboard.test.ts",
   "tests/contract/timetables.test.ts",
   "tests/contract/curriculum.test.ts",
+  "tests/contract/report-schedule.test.ts",
 ];
 
 // `--mode api` runs those contract tests over HTTP against the real API (see tests/contract/helpers.ts).

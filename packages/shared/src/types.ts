@@ -479,6 +479,8 @@ export interface ReportCardSummary {
   rank: number;
   classSize: number;
   grades: Record<string, number>;
+  /** One per subject the student sits, for the class mark schedule. */
+  marks: { subjectId: ID; mark: MarkValue; grade: string }[];
   status: ReportCardStatus;
   hasRemark: boolean;
 }
@@ -489,6 +491,10 @@ export interface ReportCardClassView {
   className: string;
   status: ReportCardStatus;
   marksComplete: boolean;
+  /** The subjects the mark schedule has columns for, with their class averages. */
+  subjects: { subjectId: ID; name: string; optionGroup?: string; average: number }[];
+  /** A/L: how many of the options each student takes. */
+  optionsRequired?: number;
   rows: ReportCardSummary[];
 }
 

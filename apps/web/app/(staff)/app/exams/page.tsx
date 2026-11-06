@@ -10,7 +10,7 @@ import { Progress } from "@/components/ui/progress";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
-import { DataTable } from "@/components/shared/data-table";
+import { DataTable, pageOfRows } from "@/components/shared/data-table";
 import { FilterBar } from "@/components/shared/filters";
 import { PageHeader } from "@/components/shared/page-header";
 import { SearchInput } from "@/components/shared/search-input";
@@ -46,6 +46,8 @@ export default function ExamsPage() {
       (s) => (!q || s.className.toLowerCase().includes(q) || s.subjectName.toLowerCase().includes(q)) && (url.get("pending") !== "1" || !s.submitted),
     );
   }, [progress.data, url]);
+
+  const paged = pageOfRows(rows, url.page, (page) => url.set({ page }));
 
   if (exams.isPending) return <PageSkeleton />;
   if (exams.error) return <ErrorState error={exams.error} onRetry={exams.refetch} />;
@@ -107,7 +109,8 @@ export default function ExamsPage() {
       </FilterBar>
 
       <DataTable
-        rows={rows}
+        rows={paged.rows}
+        pagination={paged.pagination}
         loading={progress.isPending}
         error={progress.error}
         onRetry={progress.refetch}

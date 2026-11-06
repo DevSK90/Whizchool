@@ -36,3 +36,29 @@ test("principal opens the batch print view for a released class", async ({ page 
   await expect(cards.first()).toBeVisible();
   expect(await cards.count()).toBeGreaterThan(10);
 });
+
+test("a class's mark schedule lists every student's marks, and exports them", async ({ page }) => {
+  await signIn(page, "principal");
+  await open(page, "/app/report-cards/exam_2026_2/class/cls_2026_10a");
+  const table = page.getByRole("table");
+  await expect(table.getByRole("columnheader", { name: "Mathematics", exact: true })).toBeVisible();
+  await expect(table.getByRole("columnheader", { name: "Basket I", exact: true })).toBeVisible();
+  await expect(table.getByRole("rowheader", { name: "Class average" })).toBeVisible();
+  // Rank 1 first, with a mark under each compulsory subject.
+  const first = table.getByRole("row").nth(1);
+  await expect(first.getByRole("rowheader")).toContainText(/^\s*1/);
+  await expect(first.getByRole("cell").first()).toHaveText(/\d|AB/);
+
+  const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export to Excel (CSV)" }).click();
+  const file = await download;
+  expect(file.suggestedFilename()).toMatch(/^10-A .*marks\.csv$/);
+  const csv = await (await file.createReadStream()).toArray();
+  const text = Buffer.concat(csv).toString("utf8");
+  expect(text.split("\r\n")[0]).toContain("Mathematics");
+  expect(text.split("\r\n").length).toBeGreaterThan(10);
+
+  // Remarks and the individual report cards are a tab away.
+  await page.getByRole("tab", { name: "Report cards & remarks" }).click();
+  await expect(page.getByRole("link", { name: "View" }).first()).toBeVisible();
+});

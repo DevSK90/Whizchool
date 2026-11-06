@@ -9,12 +9,14 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
 import { Spinner } from "@/components/ui/spinner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { DataTable } from "@/components/shared/data-table";
 import { PageHeader } from "@/components/shared/page-header";
 import { ErrorState, PageSkeleton } from "@/components/shared/states";
 import { StatusBadge } from "@/components/shared/status-badge";
+import { MarkSchedule } from "@/components/reports/mark-schedule";
 import { api } from "@/lib/api/client";
 import { useApiMutation, useReportCard, useReportCardClass } from "@/lib/api/hooks";
 import type { ReportCardSummary } from "@whizchool/shared/types";
@@ -46,6 +48,7 @@ export default function ClassReportCardsPage({ params }: PageProps<"/app/report-
   return (
     <>
       <PageHeader
+        className="no-print"
         back={{ href: `/app/report-cards?exam=${examId}`, label: t("back") }}
         title={
           <span className="flex flex-wrap items-center gap-3">
@@ -106,11 +109,20 @@ export default function ClassReportCardsPage({ params }: PageProps<"/app/report-
         }
       />
       {!data.marksComplete && (
-        <Alert className="mb-4">
+        <Alert className="no-print mb-4">
           <Info />
           <AlertDescription>{t("marksPending")}</AlertDescription>
         </Alert>
       )}
+      <Tabs defaultValue="marks">
+        <TabsList className="no-print mb-4">
+          <TabsTrigger value="marks">{t("tabMarks")}</TabsTrigger>
+          <TabsTrigger value="cards">{t("tabCards")}</TabsTrigger>
+        </TabsList>
+        <TabsContent value="marks">
+          <MarkSchedule data={data} />
+        </TabsContent>
+        <TabsContent value="cards">
       <DataTable
         rows={data.rows}
         rowKey={(r) => r.studentId}
@@ -168,6 +180,8 @@ export default function ClassReportCardsPage({ params }: PageProps<"/app/report-
       <p className="mt-2 text-xs text-muted-foreground">
         {tc("total")}: {data.rows.length}
       </p>
+        </TabsContent>
+      </Tabs>
       {remarkFor && <RemarkDialog examId={examId} row={remarkFor} onClose={() => setRemarkFor(null)} />}
     </>
   );

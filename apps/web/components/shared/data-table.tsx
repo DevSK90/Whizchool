@@ -23,6 +23,16 @@ export interface Column<T> {
 
 const HIDE = { sm: "hidden sm:table-cell", md: "hidden md:table-cell", lg: "hidden lg:table-cell" };
 
+/** One page of a list that's already loaded in full, for the table's pager; a page past the end shows the last. */
+export function pageOfRows<T>(rows: T[] | undefined, page: number, onPage: (page: number) => void, pageSize = 25) {
+  const total = rows?.length ?? 0;
+  const current = Math.min(Math.max(1, page), Math.max(1, Math.ceil(total / pageSize)));
+  return {
+    rows: rows?.slice((current - 1) * pageSize, current * pageSize),
+    pagination: { page: current, pageSize, total, onPage },
+  };
+}
+
 export function DataTable<T>({
   columns,
   rows,

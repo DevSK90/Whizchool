@@ -65,33 +65,59 @@ function SchoolProfile() {
   const save = useApiMutation(() => api.put("/settings/school", form), { invalidate: [["school"], ["publicSchool"]], success: t("saved"), toastError: false, onSuccess: () => setErrors({}) });
   if (isPending || !form) return <PageSkeleton />;
   if (error) return <ErrorState error={error} onRetry={refetch} />;
-  const field = (key: keyof School, label: string, hint?: string) => (
+  const dirty = JSON.stringify(form) !== JSON.stringify(data);
+  const field = (key: keyof School, label: string, hint?: string, type?: string) => (
     <Field data-invalid={!!errors[key]}>
       <FieldLabel htmlFor={`s-${key}`}>{label}</FieldLabel>
-      <Input id={`s-${key}`} value={String(form[key] ?? "")} disabled={!editable} onChange={(e) => setForm({ ...form, [key]: e.target.value })} aria-invalid={!!errors[key]} />
+      <Input id={`s-${key}`} type={type} value={String(form[key] ?? "")} disabled={!editable} onChange={(e) => setForm({ ...form, [key]: e.target.value })} aria-invalid={!!errors[key]} />
       {hint && <FieldDescription>{hint}</FieldDescription>}
       <FieldError>{errors[key]}</FieldError>
     </Field>
   );
-  return (
-    <Card className="max-w-3xl">
+  const section = (key: "details" | "contact" | "administration" | "day", children: React.ReactNode) => (
+    <Card>
+      <CardHeader>
+        <CardTitle>{t(`sections.${key}.title`)}</CardTitle>
+        <CardDescription>{t(`sections.${key}.description`)}</CardDescription>
+      </CardHeader>
       <CardContent>
-        <FieldGroup>
-          <div className="grid gap-4 sm:grid-cols-[1fr_12rem]">
-            {field("name", t("name"))}
-            {field("shortName", t("shortName"))}
-          </div>
-          {field("motto", t("motto"))}
-          {field("address", t("address"))}
-          <div className="grid gap-4 sm:grid-cols-3">
-            {field("phone", t("phone"))}
-            {field("email", t("email"))}
+        <FieldGroup>{children}</FieldGroup>
+      </CardContent>
+    </Card>
+  );
+  return (
+    <div className="space-y-6">
+      <div className="grid gap-6 lg:grid-cols-2">
+        {section(
+          "details",
+          <>
+            <div className="grid gap-4 sm:grid-cols-[1fr_10rem]">
+              {field("name", t("name"))}
+              {field("shortName", t("shortName"))}
+            </div>
+            {field("motto", t("motto"))}
+          </>,
+        )}
+        {section(
+          "contact",
+          <>
+            {field("address", t("address"))}
+            <div className="grid gap-4 sm:grid-cols-2">
+              {field("phone", t("phone"), undefined, "tel")}
+              {field("email", t("email"), undefined, "email")}
+            </div>
             {field("website", t("website"))}
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            {field("principalName", t("principal"))}
+          </>,
+        )}
+        {section(
+          "administration",
+          <>
+            {field("principalName", t("principal"), t("principalHint"))}
             {field("smsSenderId", t("smsSender"), t("smsSenderHint"))}
-          </div>
+          </>,
+        )}
+        {section(
+          "day",
           <div className="grid gap-4 sm:grid-cols-2">
             {(["timetableStart", "timetableEnd"] as const).map((key) => (
               <Field key={key} data-invalid={!!errors[key]}>
@@ -105,21 +131,32 @@ function SchoolProfile() {
                   onChange={(e) => setForm({ ...form, [key]: parseTime(e.target.value) ?? form[key] })}
                   aria-invalid={!!errors[key]}
                 />
-                {key === "timetableStart" && <FieldDescription>{t("timetableHint")}</FieldDescription>}
                 <FieldError>{errors[key]}</FieldError>
               </Field>
             ))}
-          </div>
-          {editable && (
-            <div className="flex justify-end">
-              <Button onClick={() => save.mutateAsync(undefined).catch((e) => setErrors(e instanceof ApiError && e.fields ? e.fields : {}))} disabled={save.isPending}>
-                {save.isPending && <Spinner />} {tc("saveChanges")}
-              </Button>
-            </div>
+          </div>,
+        )}
+      </div>
+      {editable && (
+        <div className="sticky bottom-0 z-10 -mx-4 flex flex-wrap items-center justify-end gap-3 border-t bg-background/95 px-4 py-3 backdrop-blur md:-mx-6 md:px-6">
+          {dirty && <span className="mr-auto text-sm text-muted-foreground">{t("unsaved")}</span>}
+          {dirty && (
+            <Button
+              variant="outline"
+              onClick={() => {
+                setForm(data!);
+                setErrors({});
+              }}
+            >
+              {t("discard")}
+            </Button>
           )}
-        </FieldGroup>
-      </CardContent>
-    </Card>
+          <Button onClick={() => save.mutateAsync(undefined).catch((e) => setErrors(e instanceof ApiError && e.fields ? e.fields : {}))} disabled={!dirty || save.isPending}>
+            {save.isPending && <Spinner />} {tc("saveChanges")}
+          </Button>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -471,8 +508,9 @@ function Grading() {
   if (error) return <ErrorState error={error} onRetry={refetch} />;
   const set = (i: number, patch: Partial<GradeBand>) => setBands((b) => b.map((x, j) => (j === i ? { ...x, ...patch } : x)));
   return (
-    <Card className="max-w-3xl">
+    <Card>
       <CardHeader>
+        <CardTitle>{t("title")}</CardTitle>
         <CardDescription>{t("description")}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -512,6 +550,7 @@ function Grading() {
             ))}
           </TableBody>
         </Table>
+        {!problem && bands.length > 0 && <GradeScale bands={bands} />}
         {problem && <p className="text-sm text-destructive">{problem}</p>}
         {editable && (
           <Button onClick={() => save.mutate(undefined)} disabled={!!problem || save.isPending}>
@@ -520,5 +559,32 @@ function Grading() {
         )}
       </CardContent>
     </Card>
+  );
+}
+
+/** The bands laid along 0–100, so a gap or an overlap would be plain to see. */
+function GradeScale({ bands }: { bands: GradeBand[] }) {
+  const t = useTranslations("admin.settings.grading");
+  const sorted = [...bands].sort((a, b) => a.min - b.min);
+  return (
+    <div>
+      <p className="mb-2 text-xs font-medium text-muted-foreground">{t("scale")}</p>
+      <div className="flex h-9 overflow-hidden rounded-lg border text-xs font-semibold" role="img" aria-label={sorted.map((b) => `${b.grade} ${b.min}–${b.max}`).join(", ")}>
+        {sorted.map((b) => (
+          <div
+            key={b.grade}
+            className={b.pass ? "flex items-center justify-center border-r bg-primary/10 text-primary last:border-r-0" : "flex items-center justify-center border-r bg-destructive/10 text-destructive last:border-r-0"}
+            style={{ width: `${b.max - b.min + 1}%` }}
+            title={`${b.grade}: ${b.min}–${b.max}`}
+          >
+            {b.grade}
+          </div>
+        ))}
+      </div>
+      <div className="mt-1 flex justify-between text-[11px] text-muted-foreground tabular">
+        <span>0</span>
+        <span>100</span>
+      </div>
+    </div>
   );
 }

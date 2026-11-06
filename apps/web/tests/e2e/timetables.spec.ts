@@ -26,7 +26,7 @@ test("admin drags a lesson onto the board and publishes it; the teacher and the 
   await page.mouse.down();
   await page.mouse.move(from.x + from.width / 2 + 20, from.y + from.height / 2 + 5, { steps: 3 });
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, { steps: 12 });
-  await expect(page.getByText(time)).toBeVisible();
+  await expect(page.getByText(time).locator("visible=true").first()).toBeVisible();
   await page.mouse.up();
   await expect(lessons).toHaveCount(before);
   const placed = page.getByRole("button", { name: `Mathematics · ${time}`, exact: false });

@@ -297,7 +297,16 @@
       "saved": "School profile saved.",
       "timetableStart": "School day starts",
       "timetableEnd": "School day ends",
-      "timetableHint": "The hours timetables cover."
+      "timetableHint": "The hours timetables cover.",
+      "principalHint": "Printed under the principal's signature on report cards.",
+      "unsaved": "You have unsaved changes.",
+      "discard": "Discard",
+      "sections": {
+        "details": { "title": "School details", "description": "How the school is named on report cards, receipts and the parent portal." },
+        "contact": { "title": "Contact", "description": "Printed on report cards and receipts, and shown on the public site." },
+        "administration": { "title": "Administration", "description": "Who signs report cards, and the name text messages come from." },
+        "day": { "title": "School day", "description": "The hours class timetables cover, Monday to Friday." }
+      }
     },
     "calendar": {
       "year": "Academic year {name}",
@@ -341,6 +350,8 @@
       "byStream": "Depends on stream"
     },
     "grading": {
+      "title": "Grading scale",
+      "scale": "The scale from 0 to 100 (red bands don't pass)",
       "description": "Marks out of 100 are converted to these grades on mark sheets and report cards.",
       "grade": "Grade",
       "min": "From",
